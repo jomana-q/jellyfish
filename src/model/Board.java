@@ -1,29 +1,38 @@
 package model;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
-
 
 public class Board {
 
     private final int rows;
     private final int cols;
     private final int totalMines;
+    private final int questionCount;
+    private final int surpriseCount;
 
-    private Cell[][] grid;
+    private final Cell[][] grid;
+    private final Random random = new Random();
 
     public Board(Difficulty difficulty) {
         this.rows = difficulty.getRows();
         this.cols = difficulty.getCols();
-        this.totalMines = difficulty.getMines();
+        this.totalMines    = difficulty.getMines();
+        this.questionCount = difficulty.getQuestionCount();
+        this.surpriseCount = difficulty.getSurpriseCount();
 
         this.grid = new Cell[rows][cols];
 
-        initEmptyCells();
-        placeMinesRandomly();
-        calculateAdjacentMines();
+        initEmptyCells();          // כל התאים מתחילים EMPTY
+        placeMinesRandomly();      // מפזרים מוקשים
+        calculateAdjacentMines();  // הופכים EMPTY->NUMBER כשצריך
+        placeSpecialTiles();       // הופכים חלק מה-EMPTY ל-QUESTION/SURPRISE
     }
 
-    // ממלא את כל הלוח בתאים ריקים בהתחלה
+    // ---------- בניית הלוח ----------
+
     private void initEmptyCells() {
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
@@ -34,22 +43,21 @@ public class Board {
 
     // מפזר מוקשים באקראי בלי כפילויות
     private void placeMinesRandomly() {
-        Random random = new Random();
         int minesPlaced = 0;
 
         while (minesPlaced < totalMines) {
             int r = random.nextInt(rows);
             int c = random.nextInt(cols);
 
-            // אם כבר יש מוקש שם – מדלגים
             if (grid[r][c].getType() != CellType.MINE) {
-                grid[r][c] = new Cell(CellType.MINE);
+                grid[r][c].setType(CellType.MINE);
                 minesPlaced++;
             }
         }
     }
 
     // מחשב לכל תא non-mine כמה מוקשים יש סביבו
+    // ומחליט אם הוא EMPTY (0 שכנים) או NUMBER (1–8 שכנים)
     private void calculateAdjacentMines() {
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
@@ -77,13 +85,41 @@ public class Board {
 
                 if (count == 0) {
                     grid[r][c].setAdjacentMines(0);
-                    // משאירים אותו EMPTY
+                    grid[r][c].setType(CellType.EMPTY);
                 } else {
                     grid[r][c].setAdjacentMines(count);
-                    // נחשב אותו כ NUMBER
-                    // (אפשר להחליט מאוחר יותר אם לשנות את type ל-NUMBER כאן)
+                    grid[r][c].setType(CellType.NUMBER);
                 }
             }
+        }
+    }
+
+    // משבצות ריקות שנשארו הופכות אקראית לשאלה/הפתעה
+    private void placeSpecialTiles() {
+        List<int[]> emptyCells = new ArrayList<>();
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                if (grid[r][c].getType() == CellType.EMPTY) {
+                    emptyCells.add(new int[]{r, c});
+                }
+            }
+        }
+
+        Collections.shuffle(emptyCells, random);
+
+        int idx = 0;
+
+        // שאלות
+        for (int i = 0; i < questionCount && idx < emptyCells.size(); i++, idx++) {
+            int[] pos = emptyCells.get(idx);
+            grid[pos[0]][pos[1]].setType(CellType.QUESTION);
+        }
+
+        // הפתעות
+        for (int i = 0; i < surpriseCount && idx < emptyCells.size(); i++, idx++) {
+            int[] pos = emptyCells.get(idx);
+            grid[pos[0]][pos[1]].setType(CellType.SURPRISE);
         }
     }
 
@@ -91,7 +127,8 @@ public class Board {
         return r >= 0 && r < rows && c >= 0 && c < cols;
     }
 
-    // Getters בסיסיים – יעזרו בהמשך ל-Controller / View
+    // ---------- Getters בסיסיים ----------
+
     public int getRows() {
         return rows;
     }
@@ -106,84 +143,131 @@ public class Board {
         }
         return grid[row][col];
     }
+
+    // ---------- לוגיקת משחק – איטרציה 1 ----------
+
     /**
-     * openCell (חשיפת תא)
-     * פותח תא ספציפי ומחיל את לוגיקת המשחק הבסיסית.
-     * Open Cell: Main game logic entry point.
-     *
-     * @param row The row index / מספר השורה
-     * @param col The column index / מספר העמודה
-     * @param session The current game session / סשן המשחק הנוכחי
+     * חשיפת תא ע"י השחקן.
+     * לפי האפיון:
+     *  - MINE   → hearts-1
+     *  - EMPTY / NUMBER / QUESTION / SURPRISE → pts+1
+     *  - EMPTY → מפעיל קסקדה של ריקים (וגם מספרים מסביבם)
      */
     public void openCell(int row, int col, GameSession session) {
-        
-        // נשתמש ב-getCell של מפתח 1 לבדיקת גבולות ותקינות
-        Cell cell = getCell(row, col);
+        revealRecursive(row, col, session);
+    }
 
-        // תנאי יציאה: התא אינו קיים (מחוץ לגבולות), כבר נחשף או מסומן בדגל.
-        if (cell == null || cell.isRevealed() || cell.isFlagged()) {
+    // פונקציה פנימית רקורסיבית (משתמשת גם לקסקדה)
+    private void revealRecursive(int row, int col, GameSession session) {
+        if (!isInBounds(row, col)) {
             return;
         }
 
-        // חשיפת התא
+        Cell cell = grid[row][col];
+
+        // לא חושפים שוב תא שנחשף או מסומן בדגל
+        if (cell.isRevealed() || cell.isFlagged()) {
+            return;
+        }
+
         cell.setRevealed(true);
 
-        // החלת לוגיקה בהתאם לסוג התא
+        if (cell.getType() == CellType.MINE) {
+            // מוקש: מפסידים חיים, בלי ניקוד
+            session.decreaseLives();
+            return;
+        }
+
+        // כל תא שהוא לא מוקש → נקודה אחת
+        session.updateScore(+1);
+
+        // אם זה לא תא ריק – לא ממשיכים קסקדה
+        if (cell.getType() != CellType.EMPTY) {
+            return;
+        }
+
+        // קסקדה: חושפים שכנים שהם EMPTY או NUMBER בלבד
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+
+                if (dr == 0 && dc == 0) continue;
+
+                int nr = row + dr;
+                int nc = col + dc;
+
+                if (!isInBounds(nr, nc)) continue;
+
+                Cell neighbor = grid[nr][nc];
+
+                if (neighbor.isRevealed() || neighbor.isFlagged()) {
+                    continue;
+                }
+
+                if (neighbor.getType() == CellType.EMPTY ||
+                    neighbor.getType() == CellType.NUMBER) {
+                    revealRecursive(nr, nc, session);
+                }
+            }
+        }
+    }
+
+    /**
+     * סימון / ביטול סימון בדגל.
+     * לפי האפיון:
+     *  - Mine   מסומן בדגל → pts+1  + חשיפת המוקש
+     *  - Number / Empty / Question / Surprise מסומנים בדגל → pts-3
+     * ביטול סימון: בלי שינוי ניקוד.
+     */
+    public void toggleFlag(int row, int col, GameSession session) {
+        Cell cell = getCell(row, col);
+
+        // אי אפשר לסמן תא שכבר נחשף
+        if (cell.isRevealed()) {
+            return;
+        }
+
+        if (cell.isFlagged()) {
+            // ביטול דגל – לא משנים ניקוד
+            cell.setFlagged(false);
+            return;
+        }
+
+        // סימון חדש
+        cell.setFlagged(true);
+
         switch (cell.getType()) {
             case MINE:
-                // מוקש: הפחתת חיים (שימוש במשימת מפתח 3)
-                session.decreaseLives();
-                break;
-
-            case EMPTY:
-                // תא ריק: עדכון ניקוד והפעלת קסקדה
-                session.updateScore(1);
-                cascade(row, col);
+                session.updateScore(+1);
+                // האפיון אומר "וחושפת המוקש" – אז נסמן גם חשיפה
+                cell.setRevealed(true);
                 break;
 
             case NUMBER:
+            case EMPTY:
             case QUESTION:
             case SURPRISE:
-                // תא מספר/מיוחד: עדכון ניקוד בלבד
-                session.updateScore(1);
+                session.updateScore(-3);
                 break;
         }
     }
 
-
     /**
-     * cascade (קסקדה רקורסיבית)
-     * פונקציה תהודה (רקורסיבית) לניקוי שטח ריק של תאים מחוברים.
-     *
-     * @param row שורת התא הנוכחי
-     * @param col עמודת התא הנוכחי
+     * בדיקה אם ניתן להפעיל משבצת שאלה/הפתעה:
+     *  - התא נחשף
+     *  - הוא Question או Surprise
+     *  - הוא עוד לא הופעל (USED)
      */
-    private void cascade(int row, int col) {
-        // לולאה על 8 השכנים (i ו-j מ-1- עד 1+)
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
-                
-                // דלג על התא הנוכחי
-                if (i == 0 && j == 0) continue;
+    public boolean canActivateSpecial(int row, int col) {
+        Cell cell = getCell(row, col);
+        return cell.isRevealed()
+                && !cell.isPowerUsed()
+                && (cell.getType() == CellType.QUESTION
+                    || cell.getType() == CellType.SURPRISE);
+    }
 
-                int r = row + i;
-                int c = col + j;
-
-                // השגת השכן (getCell דואג לבדיקת גבולות)
-                Cell neighbor = getCell(r, c);
-
-                // תנאי חשיפה: השכן קיים, לא נחשף, לא דגל, ולא מוקש.
-                if (neighbor != null && !neighbor.isRevealed() && !neighbor.isFlagged() && neighbor.getType() != CellType.MINE) {
-                    
-                    neighbor.setRevealed(true); // חשיפת התא השכן
-
-                    // אם התא השכן ריק, המשך רקורסיה (קסקדה)
-                    if (neighbor.getType() == CellType.EMPTY) {
-                        cascade(r, c);
-                    }
-                    // אם התא השכן הוא מספר, עוצרים שם.
-                }
-            }
-        }
+    /** סימון התא כ־USED אחרי שהופעלה השאלה/הפתעה */
+    public void markSpecialUsed(int row, int col) {
+        Cell cell = getCell(row, col);
+        cell.setPowerUsed(true);
     }
 }
