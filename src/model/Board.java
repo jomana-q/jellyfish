@@ -2,6 +2,7 @@ package model;
 
 import java.util.Random;
 
+
 public class Board {
 
     private final int rows;
@@ -104,5 +105,85 @@ public class Board {
             throw new IllegalArgumentException("Cell out of bounds");
         }
         return grid[row][col];
+    }
+    /**
+     * openCell (חשיפת תא)
+     * פותח תא ספציפי ומחיל את לוגיקת המשחק הבסיסית.
+     * Open Cell: Main game logic entry point.
+     *
+     * @param row The row index / מספר השורה
+     * @param col The column index / מספר העמודה
+     * @param session The current game session / סשן המשחק הנוכחי
+     */
+    public void openCell(int row, int col, GameSession session) {
+        
+        // נשתמש ב-getCell של מפתח 1 לבדיקת גבולות ותקינות
+        Cell cell = getCell(row, col);
+
+        // תנאי יציאה: התא אינו קיים (מחוץ לגבולות), כבר נחשף או מסומן בדגל.
+        if (cell == null || cell.isRevealed() || cell.isFlagged()) {
+            return;
+        }
+
+        // חשיפת התא
+        cell.setRevealed(true);
+
+        // החלת לוגיקה בהתאם לסוג התא
+        switch (cell.getType()) {
+            case MINE:
+                // מוקש: הפחתת חיים (שימוש במשימת מפתח 3)
+                session.decreaseLives();
+                break;
+
+            case EMPTY:
+                // תא ריק: עדכון ניקוד והפעלת קסקדה
+                session.updateScore(1);
+                cascade(row, col);
+                break;
+
+            case NUMBER:
+            case QUESTION:
+            case SURPRISE:
+                // תא מספר/מיוחד: עדכון ניקוד בלבד
+                session.updateScore(1);
+                break;
+        }
+    }
+
+
+    /**
+     * cascade (קסקדה רקורסיבית)
+     * פונקציה תהודה (רקורסיבית) לניקוי שטח ריק של תאים מחוברים.
+     *
+     * @param row שורת התא הנוכחי
+     * @param col עמודת התא הנוכחי
+     */
+    private void cascade(int row, int col) {
+        // לולאה על 8 השכנים (i ו-j מ-1- עד 1+)
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                
+                // דלג על התא הנוכחי
+                if (i == 0 && j == 0) continue;
+
+                int r = row + i;
+                int c = col + j;
+
+                // השגת השכן (getCell דואג לבדיקת גבולות)
+                Cell neighbor = getCell(r, c);
+
+                // תנאי חשיפה: השכן קיים, לא נחשף, לא דגל, ולא מוקש.
+                if (neighbor != null && !neighbor.isRevealed() && !neighbor.isFlagged() && neighbor.getType() != CellType.MINE) {
+                    
+                    neighbor.setRevealed(true); // חשיפת התא השכן
+
+                    // אם התא השכן ריק, המשך רקורסיה (קסקדה)
+                    if (neighbor.getType() == CellType.EMPTY) {
+                        cascade(r, c);
+                    }
+                    // אם התא השכן הוא מספר, עוצרים שם.
+                }
+            }
+        }
     }
 }
