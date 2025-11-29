@@ -153,11 +153,15 @@ public class Board {
      *  - EMPTY / NUMBER / QUESTION / SURPRISE → pts+1
      *  - EMPTY → מפעיל קסקדה של ריקים (וגם מספרים מסביבם)
      */
+ // חשיפת תא ע"י השחקן
     public void openCell(int row, int col, GameSession session) {
+        if (!isInBounds(row, col)) {
+            return;
+        }
         revealRecursive(row, col, session);
     }
 
-    // פונקציה פנימית רקורסיבית (משתמשת גם לקסקדה)
+    // פונקציה פנימית רקורסיבית (לחשיפה + קסקדה)
     private void revealRecursive(int row, int col, GameSession session) {
         if (!isInBounds(row, col)) {
             return;
@@ -165,28 +169,36 @@ public class Board {
 
         Cell cell = grid[row][col];
 
-        // לא חושפים שוב תא שנחשף או מסומן בדגל
+        // לא חושפים שוב תא שכבר נפתח או מסומן בדגל
         if (cell.isRevealed() || cell.isFlagged()) {
             return;
         }
 
+        // מסמנים כחשוף
         cell.setRevealed(true);
 
+        // מוקש → מפסידים חיים, בלי נקודות, בלי קסקדה
         if (cell.getType() == CellType.MINE) {
-            // מוקש: מפסידים חיים, בלי ניקוד
             session.decreaseLives();
             return;
         }
 
-        // כל תא שהוא לא מוקש → נקודה אחת
+        // כל תא שאינו מוקש → נקודה אחת
         session.updateScore(+1);
 
-        // אם זה לא תא ריק – לא ממשיכים קסקדה
-        if (cell.getType() != CellType.EMPTY) {
+        // נמשיך קסקדה **רק** מתאים שאין לידם מוקשים:
+        // EMPTY / QUESTION / SURPRISE (שנבחרו ממשבצות ריקות)
+        boolean zeroCell =
+                cell.getType() == CellType.EMPTY ||
+                cell.getType() == CellType.QUESTION ||
+                cell.getType() == CellType.SURPRISE;
+
+        // אם זה מספר (NUMBER) – נפתח אבל לא ממשיך קסקדה
+        if (!zeroCell) {
             return;
         }
 
-        // קסקדה: חושפים שכנים שהם EMPTY או NUMBER בלבד
+        // קסקדה: עוברים על כל השכנים, כל עוד הם לא מוקש
         for (int dr = -1; dr <= 1; dr++) {
             for (int dc = -1; dc <= 1; dc++) {
 
@@ -199,14 +211,19 @@ public class Board {
 
                 Cell neighbor = grid[nr][nc];
 
+                // מדלגים על תאים שכבר נפתחו או מסומנים בדגל
                 if (neighbor.isRevealed() || neighbor.isFlagged()) {
                     continue;
                 }
 
-                if (neighbor.getType() == CellType.EMPTY ||
-                    neighbor.getType() == CellType.NUMBER) {
-                    revealRecursive(nr, nc, session);
+                // לא מריצים קסקדה אל מוקש
+                if (neighbor.getType() == CellType.MINE) {
+                    continue;
                 }
+
+                // ניגש שוב רקורסיבית – הוא יקבל נקודה,
+                // ואם גם הוא "ריק" (EMPTY/QUESTION/SURPRISE) הוא ימשיך את הקסקדה
+                revealRecursive(nr, nc, session);
             }
         }
     }
