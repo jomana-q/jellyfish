@@ -104,4 +104,13 @@ public class GameSession {
             updateScore(-pts);
         }
     }
+
+    public int applyFlagRules(CellType type) {
+        if (type == CellType.MINE) {
+            return +1; // פגיעה טובה
+        } else {
+            return -3; // החטאה
+        }
+    }
+
 }
