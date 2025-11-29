@@ -10,8 +10,8 @@ public class GameSession {
 
     public GameSession(Difficulty difficulty) {
         this.difficulty = difficulty;
-        this.lives = difficulty.getInitialLives();
-        this.maxLives = this.lives;   // המקסימום לפי רמת הקושי
+        this.lives = difficulty.getInitialLives();  // מתחילים לפי רמת הקושי
+        this.maxLives = 10;                         // המקסימום תמיד 10 
         this.score = 0;
     }
 
