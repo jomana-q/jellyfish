@@ -153,11 +153,15 @@ public class Board {
      *  - EMPTY / NUMBER / QUESTION / SURPRISE → pts+1
      *  - EMPTY → מפעיל קסקדה של ריקים (וגם מספרים מסביבם)
      */
+ // חשיפת תא ע"י השחקן
     public void openCell(int row, int col, GameSession session) {
+        if (!isInBounds(row, col)) {
+            return;
+        }
         revealRecursive(row, col, session);
     }
 
-    // פונקציה פנימית רקורסיבית (משתמשת גם לקסקדה)
+    // פונקציה פנימית רקורסיבית (לחשיפה + קסקדה)
     private void revealRecursive(int row, int col, GameSession session) {
         if (!isInBounds(row, col)) {
             return;
@@ -165,28 +169,36 @@ public class Board {
 
         Cell cell = grid[row][col];
 
-        // לא חושפים שוב תא שנחשף או מסומן בדגל
+        // לא חושפים שוב תא שכבר נפתח או מסומן בדגל
         if (cell.isRevealed() || cell.isFlagged()) {
             return;
         }
 
+        // מסמנים כחשוף
         cell.setRevealed(true);
 
+        // מוקש → מפסידים חיים, בלי נקודות, בלי קסקדה
         if (cell.getType() == CellType.MINE) {
-            // מוקש: מפסידים חיים, בלי ניקוד
             session.decreaseLives();
             return;
         }
 
-        // כל תא שהוא לא מוקש → נקודה אחת
+        // כל תא שאינו מוקש → נקודה אחת
         session.updateScore(+1);
 
-        // אם זה לא תא ריק – לא ממשיכים קסקדה
-        if (cell.getType() != CellType.EMPTY) {
+        // נמשיך קסקדה **רק** מתאים שאין לידם מוקשים:
+        // EMPTY / QUESTION / SURPRISE (שנבחרו ממשבצות ריקות)
+        boolean zeroCell =
+                cell.getType() == CellType.EMPTY ||
+                cell.getType() == CellType.QUESTION ||
+                cell.getType() == CellType.SURPRISE;
+
+        // אם זה מספר (NUMBER) – נפתח אבל לא ממשיך קסקדה
+        if (!zeroCell) {
             return;
         }
 
-        // קסקדה: חושפים שכנים שהם EMPTY או NUMBER בלבד
+        // קסקדה: עוברים על כל השכנים, כל עוד הם לא מוקש
         for (int dr = -1; dr <= 1; dr++) {
             for (int dc = -1; dc <= 1; dc++) {
 
@@ -199,14 +211,19 @@ public class Board {
 
                 Cell neighbor = grid[nr][nc];
 
+                // מדלגים על תאים שכבר נפתחו או מסומנים בדגל
                 if (neighbor.isRevealed() || neighbor.isFlagged()) {
                     continue;
                 }
 
-                if (neighbor.getType() == CellType.EMPTY ||
-                    neighbor.getType() == CellType.NUMBER) {
-                    revealRecursive(nr, nc, session);
+                // לא מריצים קסקדה אל מוקש
+                if (neighbor.getType() == CellType.MINE) {
+                    continue;
                 }
+
+                // ניגש שוב רקורסיבית – הוא יקבל נקודה,
+                // ואם גם הוא "ריק" (EMPTY/QUESTION/SURPRISE) הוא ימשיך את הקסקדה
+                revealRecursive(nr, nc, session);
             }
         }
     }
@@ -269,5 +286,88 @@ public class Board {
     public void markSpecialUsed(int row, int col) {
         Cell cell = getCell(row, col);
         cell.setPowerUsed(true);
+    }
+    public FlagResult flagCell(int row, int col) {
+        Cell cell = grid[row][col];
+
+        if (cell.isRevealed()) {
+            return new FlagResult(false, "model.Cell already revealed", 0);
+        }
+
+        if (cell.isFlagged()) {
+            return new FlagResult(false, "model.Cell already flagged", 0);
+        }
+
+        cell.setFlagged(true);
+
+        int points = 0;
+
+        switch (cell.getType()) {
+            case MINE:
+                points = +1;
+                break;
+
+            case NUMBER:
+            case EMPTY:
+            case QUESTION:
+            case SURPRISE:
+                points = -3;
+                break;
+        }
+
+        return new FlagResult(true, "Flagged", points);
+    }
+
+
+    public ActivationResult activateCell(int row, int col, Difficulty difficulty) {
+        Cell cell = grid[row][col];
+
+        if (!cell.isRevealed()) {
+            return new ActivationResult(false, "model.Cell must be revealed first", 0, 0);
+        }
+
+        if (cell.isUsed()) {
+            return new ActivationResult(false, "model.Cell already used", 0, 0);
+        }
+
+        if (cell.getType() != CellType.QUESTION && cell.getType() != CellType.SURPRISE) {
+            return new ActivationResult(false, "model.Cell cannot be activated", 0, 0);
+        }
+
+        // עלות הפעלה
+        int cost = switch (difficulty) {
+            case EASY -> 5;
+            case MEDIUM -> 8;
+            case HARD -> 12;
+        };
+
+        int points = -cost;
+        int hearts = 0;
+
+        // אם זו הפתעה → 50/50
+        if (cell.getType() == CellType.SURPRISE) {
+            boolean good = Math.random() < 0.5;
+
+            if (good) {
+                points += switch (difficulty) {
+                    case EASY -> +8;
+                    case MEDIUM -> +12;
+                    case HARD -> +16;
+                };
+                hearts = +1;
+            } else {
+                points -= switch (difficulty) {
+                    case EASY -> 8;
+                    case MEDIUM -> 12;
+                    case HARD -> 16;
+                };
+                hearts = -1;
+            }
+        }
+
+        // סימון כ־USED
+        cell.setUsed(true);
+
+        return new ActivationResult(true, "Activated", points, hearts);
     }
 }
