@@ -18,8 +18,7 @@ public class MinesweeperController {
         this.session = session;
         this.view = view;
         
-        // חשוב: מעבירים את הבקר (this) לתצוגה כדי שהיא תוכל לקרוא לפונקציות שלנו
-        this.view.setController(this);
+
     }
 
     /**
