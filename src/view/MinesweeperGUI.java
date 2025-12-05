@@ -225,15 +225,16 @@ public class MinesweeperGUI extends JPanel {
     // ---------- רענון ה-GUI ----------
 
     public void refreshView() {
-        updateBoardView(board1, buttons1);
-        updateBoardView(board2, buttons2);
+    	updateBoardView(board1, buttons1, new Color(100, 149, 237)); 
+        updateBoardView(board2, buttons2, new Color(72, 209, 204)); 
 
         livesLabel.setText("Lives: " + session.getLives()+ " ❤️");
         scoreLabel.setText("Score: " + session.getScore());
         turnLabel.setText("Turn: " + (player1Turn ? player1Name : player2Name));
     }
 
-    private void updateBoardView(Board board, JButton[][] buttons) {
+    
+     private void updateBoardView(Board board, JButton[][] buttons, Color playerColor) {
         if (buttons == null) return;
         int rows = board.getRows();
         int cols = board.getCols();
@@ -250,11 +251,12 @@ public class MinesweeperGUI extends JPanel {
                     } else {
                         btn.setText("");
                     }
-                    btn.setBackground(new Color(30, 60, 90));
+                    //  שימוש בצבע שהתקבל במקום הצבע הקבוע
+                    btn.setBackground(playerColor);
                     btn.setForeground(Color.WHITE);
 
                 } else {
-                    // תא נחשף
+                    // תא נחשף 
                     switch (cell.getType()) {
                         case MINE:
                             btn.setText("💣");
