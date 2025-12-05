@@ -66,8 +66,8 @@ public class MinesweeperGUI extends JPanel {
         namesPanel.setOpaque(false);
         player1Label = new JLabel(player1Name, SwingConstants.CENTER);
         player2Label = new JLabel(player2Name, SwingConstants.CENTER);
-        player1Label.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        player2Label.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        player1Label.setFont(new Font("Segoe UI Emoji", Font.BOLD, 18));
+        player2Label.setFont(new Font("Segoe UI Emoji", Font.BOLD, 18));
         player1Label.setForeground(Color.WHITE);
         player2Label.setForeground(Color.LIGHT_GRAY);
 
@@ -86,7 +86,7 @@ public class MinesweeperGUI extends JPanel {
 
         for (JLabel lbl : new JLabel[]{livesLabel, scoreLabel, turnLabel}) {
             lbl.setForeground(Color.WHITE);
-            lbl.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            lbl.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
         }
 
         statsPanel.add(livesLabel);
@@ -126,7 +126,7 @@ public class MinesweeperGUI extends JPanel {
             for (int c = 0; c < cols; c++) {
                 JButton btn = new JButton();
                 btn.setMargin(new Insets(0, 0, 0, 0));
-                btn.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 24));
                 btn.setFocusPainted(false);
 
                 final int row = r;
@@ -221,7 +221,7 @@ public class MinesweeperGUI extends JPanel {
         updateBoardView(board1, buttons1);
         updateBoardView(board2, buttons2);
 
-        livesLabel.setText("Lives: " + session.getLives());
+        livesLabel.setText("Lives: " + session.getLives()+ " ❤️");
         scoreLabel.setText("Score: " + session.getScore());
         turnLabel.setText("Turn: " + (player1Turn ? player1Name : player2Name));
     }
