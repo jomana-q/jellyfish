@@ -122,11 +122,19 @@ public class MinesweeperGUI extends JPanel {
         panel.setOpaque(false);
         JButton[][] buttons = new JButton[rows][cols];
 
+        // חישוב גודל הפונט לפי כמות השורות (ככל שיש יותר שורות, הפונט קטן יותר)
+        int fontSize = 22; 
+        if (rows > 15) fontSize = 12;      // Hard (16x16)
+        else if (rows > 10) fontSize = 16; // Medium (13x13)
+
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
                 JButton btn = new JButton();
                 btn.setMargin(new Insets(0, 0, 0, 0));
-                btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 24));
+                
+                // שימוש בגודל הפונט שחישבנו
+                btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, fontSize));
+                
                 btn.setFocusPainted(false);
 
                 final int row = r;
@@ -164,7 +172,6 @@ public class MinesweeperGUI extends JPanel {
 
         return panel;
     }
-
     // ---------- לוגיקת הקליקים ----------
 
     private void handleLeftClick(Board board, int row, int col) {
