@@ -287,4 +287,92 @@ public class Board {
         Cell cell = getCell(row, col);
         cell.setPowerUsed(true);
     }
+<<<<<<< Updated upstream
 }
+=======
+    public FlagResult flagCell(int row, int col) {
+        Cell cell = grid[row][col];
+
+        if (cell.isRevealed()) {
+            return new FlagResult(false, "model.Cell already revealed", 0);
+        }
+
+        if (cell.isFlagged()) {
+            return new FlagResult(false, "model.Cell already flagged", 0);
+        }
+
+        cell.setFlagged(true);
+
+        int points = 0;
+
+        switch (cell.getType()) {
+            case MINE:
+                points = +1;
+                break;
+
+            case NUMBER:
+            case EMPTY:
+            case QUESTION:
+            case SURPRISE:
+                points = -3;
+                break;
+        }
+
+        return new FlagResult(true, "Flagged", points);
+    }
+
+
+    public ActivationResult activateCell(int row, int col, Difficulty difficulty) {
+        Cell cell = grid[row][col];
+
+        if (!cell.isRevealed()) {
+            return new ActivationResult(false, "Cell must be revealed first", 0, 0);
+        }
+
+        if (cell.isPowerUsed()) {
+            return new ActivationResult(false, "Cell already used", 0, 0);
+        }
+
+        if (cell.getType() != CellType.QUESTION && cell.getType() != CellType.SURPRISE) {
+            return new ActivationResult(false, "Cell cannot be activated", 0, 0);
+        }
+
+        // עלות הפעלה לפי רמת קושי
+        int cost = switch (difficulty) {
+            case EASY -> 5;
+            case MEDIUM -> 8;
+            case HARD -> 12;
+        };
+
+        int points = -cost;
+        int hearts = 0;
+
+        // אם זו הפתעה → 50/50 טוב/רע
+        if (cell.getType() == CellType.SURPRISE) {
+            boolean good = Math.random() < 0.5;
+
+            if (good) {
+                points += switch (difficulty) {
+                    case EASY -> +8;
+                    case MEDIUM -> +12;
+                    case HARD -> +16;
+                };
+                hearts = +1;
+            } else {
+                points -= switch (difficulty) {
+                    case EASY -> 8;
+                    case MEDIUM -> 12;
+                    case HARD -> 16;
+                };
+                hearts = -1;
+            }
+        }
+
+        // סימון התא כמשומש
+        cell.setPowerUsed(true);
+
+        return new ActivationResult(true, "Activated", points, hearts);
+    }
+
+}
+>>>>>>> Stashed changes
