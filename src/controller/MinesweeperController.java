@@ -4,7 +4,12 @@ import model.Board;
 import model.Cell;
 import model.CellType;
 import model.GameSession;
+import model.Question;
+import model.QuestionBank;
 import view.MinesweeperGUI;
+import view.QuestionDialog;
+
+import javax.swing.*;
 
 /**
  * בקר המשחק – אחראי על:
@@ -38,36 +43,98 @@ public class MinesweeperController {
     public GameSession getSession() { return session; }
     public boolean isPlayer1Turn() { return player1Turn; }
 
+    /**
+     * לחיצה שמאלית – פתיחת תא / הפעלת שאלה / הפתעה.
+     */
     public void handleLeftClick(boolean firstBoard, int row, int col) {
         Board board = firstBoard ? board1 : board2;
 
+        // אם זה תא מיוחד שניתן להפעיל (שאלה/הפתעה אחרי שנפתח)
         if (board.canActivateSpecial(row, col)) {
             Cell cell = board.getCell(row, col);
 
             if (cell.getType() == CellType.SURPRISE) {
+                // הפתעה: 50% טובה / 50% רעה
                 boolean good = Math.random() < 0.5;
                 session.applySurprise(good);
                 board.markSpecialUsed(row, col);
 
             } else if (cell.getType() == CellType.QUESTION) {
-                // ה-View מטפל בחלון השאלה
-                view.showQuestionPlaceholder(row, col);
+                // שאלה: לוקחים שאלה אקראית מה-CSV
+                Question q = QuestionBank.getInstance().getRandomQuestion();
+
+                if (q == null) {
+                    JOptionPane.showMessageDialog(
+                            view,
+                            "לא נטענו שאלות מהקובץ.\nבדקי שקובץ questions.csv נמצא בתיקייה הראשית.",
+                            "שגיאת שאלות",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                } else {
+                    // --- שמירה של מצב לפני השאלה ---
+                    int beforeScore = session.getScore();
+                    int beforeLives = session.getLives();
+
+                    // מציגים חלון שאלה – מחזיר true אם ענו נכון
+                    boolean correct = QuestionDialog.showQuestionDialog(view, q);
+
+                    // מעדכן לבבות/ניקוד לפי רמת השאלה והתשובה
+                    session.applyQuestionResult(q.getLevel(), correct);
+
+                    // --- חישוב השינויים לצורך הודעה ---
+                    int afterScore = session.getScore();
+                    int afterLives = session.getLives();
+
+                    int deltaScore = afterScore - beforeScore;
+                    int deltaLives = afterLives - beforeLives;
+
+                    StringBuilder msg = new StringBuilder();
+                    msg.append(correct ? "תשובה נכונה! 🎉" : "תשובה שגויה. 😕");
+
+                    if (deltaScore != 0) {
+                        msg.append("\nניקוד: ");
+                        msg.append(deltaScore > 0 ? "+" : "");
+                        msg.append(deltaScore);
+                    }
+                    if (deltaLives != 0) {
+                        msg.append("\nחיים: ");
+                        msg.append(deltaLives > 0 ? "+" : "");
+                        msg.append(deltaLives);
+                    }
+
+                    JOptionPane.showMessageDialog(
+                            view,
+                            msg.toString(),
+                            "תוצאה",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
+                }
+
+                // אחרי ההפעלה – אי אפשר להשתמש בתא שוב
                 board.markSpecialUsed(row, col);
             }
 
         } else {
+            // תא רגיל – פתיחה רגילה
             board.openCell(row, col, session);
         }
 
         endTurn();
     }
 
+
+    /**
+     * לחיצה ימנית – סימון/ביטול דגל.
+     */
     public void handleRightClick(boolean firstBoard, int row, int col) {
         Board board = firstBoard ? board1 : board2;
         board.toggleFlag(row, col, session);
         endTurn();
     }
 
+    /**
+     * סיום תור – רענון מסך, בדיקת חיים, החלפת שחקן.
+     */
     private void endTurn() {
         view.refreshView();
 

@@ -112,5 +112,36 @@ public class GameSession {
             return -3; // החטאה
         }
     }
+    /**
+     * החלת תוצאות של שאלה לפי רמת השאלה והאם התשובה נכונה.
+     * אפשר לשנות בקלות את המספרים אם תרצו.
+     */
+    public void applyQuestionResult(Difficulty questionLevel, boolean correct) {
+        int scoreDelta = 0;
+        int livesDelta = 0;
+
+        switch (questionLevel) {
+            case EASY:
+                // שאלה קלה – רק נקודות
+                scoreDelta = correct ? +3 : -3;
+                livesDelta = 0;
+                break;
+
+            case MEDIUM:
+                // שאלה בינונית – גם נקודות וגם לב אם ענו נכון
+                scoreDelta = correct ? +6 : -6;
+                livesDelta = correct ? +1 : 0;
+                break;
+
+            case HARD:
+                // שאלה קשה – בונוס/קנס גדול יותר
+                scoreDelta = correct ? +10 : -10;
+                livesDelta = correct ? +1 : -1;
+                break;
+        }
+
+        applyEffect(livesDelta, scoreDelta);
+    }
+
 
 }
