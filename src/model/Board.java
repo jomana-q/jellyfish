@@ -146,14 +146,7 @@ public class Board {
 
     // ---------- לוגיקת משחק – איטרציה 1 ----------
 
-    /**
-     * חשיפת תא ע"י השחקן.
-     * לפי האפיון:
-     *  - MINE   → hearts-1
-     *  - EMPTY / NUMBER / QUESTION / SURPRISE → pts+1
-     *  - EMPTY → מפעיל קסקדה של ריקים (וגם מספרים מסביבם)
-     */
- // חשיפת תא ע"י השחקן
+    /** חשיפת תא ע"י השחקן. */
     public void openCell(int row, int col, GameSession session) {
         if (!isInBounds(row, col)) {
             return;
@@ -230,10 +223,9 @@ public class Board {
 
     /**
      * סימון / ביטול סימון בדגל.
-     * לפי האפיון:
-     *  - Mine   מסומן בדגל → pts+1  + חשיפת המוקש
-     *  - Number / Empty / Question / Surprise מסומנים בדגל → pts-3
-     * ביטול סימון: בלי שינוי ניקוד.
+     *  - Mine מסומן בדגל → pts+1  + חשיפת המוקש
+     *  - מספר / ריק / שאלה / הפתעה מסומנים בדגל → pts-3
+     *  - ביטול סימון: בלי שינוי ניקוד.
      */
     public void toggleFlag(int row, int col, GameSession session) {
         Cell cell = getCell(row, col);
@@ -272,7 +264,7 @@ public class Board {
      * בדיקה אם ניתן להפעיל משבצת שאלה/הפתעה:
      *  - התא נחשף
      *  - הוא Question או Surprise
-     *  - הוא עוד לא הופעל (USED)
+     *  - הוא עוד לא הופעל (powerUsed=false)
      */
     public boolean canActivateSpecial(int row, int col) {
         Cell cell = getCell(row, col);
@@ -287,41 +279,40 @@ public class Board {
         Cell cell = getCell(row, col);
         cell.setPowerUsed(true);
     }
-<<<<<<< Updated upstream
-}
-=======
+
+    // פונקציה אופציונלית – חישוב ניקוד לדגל (אם תרצי להשתמש בה במקום toggleFlag)
     public FlagResult flagCell(int row, int col) {
         Cell cell = grid[row][col];
 
         if (cell.isRevealed()) {
-            return new FlagResult(false, "model.Cell already revealed", 0);
+            return new FlagResult(false, "Cell already revealed", 0);
         }
 
         if (cell.isFlagged()) {
-            return new FlagResult(false, "model.Cell already flagged", 0);
+            return new FlagResult(false, "Cell already flagged", 0);
         }
 
         cell.setFlagged(true);
 
-        int points = 0;
-
+        int points;
         switch (cell.getType()) {
             case MINE:
                 points = +1;
                 break;
-
             case NUMBER:
             case EMPTY:
             case QUESTION:
             case SURPRISE:
                 points = -3;
                 break;
+            default:
+                points = 0;
         }
 
         return new FlagResult(true, "Flagged", points);
     }
 
-
+    // פונקציה אופציונלית – הפעלת שאלה/הפתעה עם ניקוד ולבבות
     public ActivationResult activateCell(int row, int col, Difficulty difficulty) {
         Cell cell = grid[row][col];
 
@@ -373,10 +364,4 @@ public class Board {
 
         return new ActivationResult(true, "Activated", points, hearts);
     }
-
-<<<<<<< Updated upstream
 }
->>>>>>> Stashed changes
-=======
-}
->>>>>>> Stashed changes

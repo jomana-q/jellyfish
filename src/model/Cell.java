@@ -55,11 +55,4 @@ public class Cell {
     public void setPowerUsed(boolean powerUsed) {
         this.powerUsed = powerUsed;
     }
-<<<<<<< Updated upstream
-=======
-
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 }
