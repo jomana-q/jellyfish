@@ -1,7 +1,7 @@
 package model;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream; 
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -14,11 +14,18 @@ import java.util.Random;
  */
 public class QuestionBank {
 
+    // Singleton – מופע יחיד לכל המשחק
+    private static final QuestionBank INSTANCE = new QuestionBank();
+
+    public static QuestionBank getInstance() {
+        return INSTANCE;
+    }
+
     private List<Question> questions;
     private Random random;
-    
+
     // שם קובץ השאלות (חייב להיות בתיקייה הראשית של הפרויקט)
-    private static final String CSV_FILE_PATH = "questions.csv"; 
+    private static final String CSV_FILE_PATH = "questions.csv";
 
     public QuestionBank() {
         this.questions = new ArrayList<>();
@@ -30,61 +37,119 @@ public class QuestionBank {
      * קריאת קובץ ה-CSV וניתוח הנתונים.
      */
     private void loadQuestionsFromCSV() {
-        String line = "";
-        String splitBy = ",";
+        String line;
 
-        // שימוש ב-UTF-8 כדי לתמוך בעברית ושפות אחרות
         try (BufferedReader br = new BufferedReader(
                 new InputStreamReader(new FileInputStream(CSV_FILE_PATH), StandardCharsets.UTF_8))) {
-            
-            br.readLine(); // דילוג על השורה הראשונה (כותרות)
+
+            // --- קריאת שורת כותרות ---
+            String header = br.readLine(); // ID,Question,Difficulty,A,B,C,D,Correct Answer
+            if (header == null) {
+                System.err.println("Systems: CSV file is empty.");
+                return;
+            }
+
+            // זיהוי המפריד הנכון: פסיק / נקודה-פסיק / טאב
+            String delimiterRegex;
+            if (header.contains(",")) {
+                delimiterRegex = ",";        // CSV "רגיל"
+            } else if (header.contains(";")) {
+                delimiterRegex = ";";        // לפעמים משתמשים ב־;
+            } else {
+                delimiterRegex = "\t";       // קובץ טאב כמו אצלך מאקסל
+            }
+
+            int row = 0;
 
             while ((line = br.readLine()) != null) {
-                // דילוג על שורות ריקות
-                if (line.trim().isEmpty()) continue;
+                row++;
 
-                String[] data = line.split(splitBy);
+                if (line.trim().isEmpty()) {
+                    continue; // שורה ריקה
+                }
 
-                // בדיקה שיש מספיק עמודות (שאלה, 4 תשובות, אינדקס נכון, קושי)
-                if (data.length >= 7) {
-                    try {
-                        String qText = data[0].trim();
-                        String[] answers = {
-                            data[1].trim(), data[2].trim(), 
-                            data[3].trim(), data[4].trim()
-                        };
-                        
-                        // המרת מס' התשובה הנכונה (בקובץ 1-4) לאינדקס מערך (0-3)
-                        int correctIdx = Integer.parseInt(data[5].trim()) - 1; 
-                        
-                        // המרת מס' הקושי (1,2,3) ל-Enum של Difficulty
-                        int diffNum = Integer.parseInt(data[6].trim());
-                        Difficulty level;
-                        if (diffNum == 3) level = Difficulty.HARD;
-                        else if (diffNum == 2) level = Difficulty.MEDIUM;
-                        else level = Difficulty.EASY;
+                // split לפי המפריד שמצאנו
+                String[] data = line.split(delimiterRegex, -1);
 
-                        // הוספת השאלה לרשימה
-                        questions.add(new Question(qText, answers, correctIdx, level));
-                        
-                    } catch (Exception e) {
-                        System.err.println("שגיאה בקריאת שורה: " + line);
+                // אנחנו מצפים ל־8 עמודות:
+                // 0: ID
+                // 1: Question
+                // 2: Difficulty (1/2/3)
+                // 3: A
+                // 4: B
+                // 5: C
+                // 6: D
+                // 7: Correct Answer (A/B/C/D)
+                if (data.length < 8) {
+                    System.err.println("Systems: bad CSV row (expected 8 columns, got "
+                            + data.length + "): " + line);
+                    continue;
+                }
+
+                try {
+                    String qText = data[1].trim();
+
+                    String[] answers = {
+                            data[3].trim(), // A
+                            data[4].trim(), // B
+                            data[5].trim(), // C
+                            data[6].trim()  // D
+                    };
+
+                    // Difficulty: 1=EASY, 2=MEDIUM, 3=HARD
+                    int diffNum = Integer.parseInt(data[2].trim());
+                    Difficulty level;
+                    if (diffNum == 1) {
+                        level = Difficulty.EASY;
+                    } else if (diffNum == 2) {
+                        level = Difficulty.MEDIUM;
+                    } else {
+                        level = Difficulty.HARD;
                     }
+
+                    // Correct Answer: אות A/B/C/D → אינדקס 0–3
+                    int correctIdx = letterToIndex(data[7].trim());
+                    if (correctIdx < 0 || correctIdx > 3) {
+                        System.err.println("Systems: bad correct answer letter in row " + row
+                                + ": " + data[7]);
+                        continue;
+                    }
+
+                    questions.add(new Question(qText, answers, correctIdx, level));
+
+                } catch (Exception e) {
+                    System.err.println("Systems: error parsing row " + row + ": " + line);
+                    e.printStackTrace();
                 }
             }
-            // הודעה ללוג על הצלחת הטעינה
+
             System.out.println("Systems: Loaded " + questions.size() + " questions successfully from CSV.");
 
         } catch (IOException e) {
-            System.err.println("שגיאה: לא ניתן למצוא את הקובץ 'questions.csv' בתיקייה הראשית.");
+            System.err.println("שגיאה: לא ניתן לקרוא את הקובץ '" + CSV_FILE_PATH + "'.");
+            e.printStackTrace();
         }
     }
 
-    /**
-     * החזרת שאלה אקראית מהמאגר.
-     */
+    /** המרת אות (A/B/C/D) לאינדקס 0–3. */
+    private int letterToIndex(String letter) {
+        if (letter == null) return -1;
+        letter = letter.trim().toUpperCase();
+
+        return switch (letter) {
+            case "A" -> 0;
+            case "B" -> 1;
+            case "C" -> 2;
+            case "D" -> 3;
+            default -> -1;
+        };
+    }
+
+    /** החזרת שאלה אקראית מהמאגר. */
     public Question getRandomQuestion() {
-        if (questions.isEmpty()) return null;
+        if (questions.isEmpty()) {
+            return null;
+        }
         return questions.get(random.nextInt(questions.size()));
     }
 }

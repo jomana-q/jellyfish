@@ -5,6 +5,7 @@ import model.Board;
 import model.Cell;
 import model.CellType;
 import model.GameSession;
+import model.Question;
 
 import javax.swing.*;
 import java.awt.*;
@@ -332,14 +333,27 @@ public class MinesweeperGUI extends JPanel {
     }
 
     /**
-     * כרגע רק Placeholder להפעלת שאלה – בעתיד תחברי למסך שאלות אמיתי.
+     * מציג חלון שאלה (4 תשובות) ומחזיר את אינדקס התשובה שנבחרה (0-3).
+     * אם המשתמש סגר את החלון בלי לבחור תשובה – מוחזר null.
      */
-    public void showQuestionPlaceholder(int row, int col) {
-        JOptionPane.showMessageDialog(
+    public Integer askQuestion(Question question) {
+        String[] answers = question.getAnswers();
+
+        int choice = JOptionPane.showOptionDialog(
                 this,
-                "Question activation – to be implemented.\n(קליק שני מפעיל את השאלה)",
+                question.getQuestionText(),
                 "Question",
-                JOptionPane.INFORMATION_MESSAGE
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                answers,
+                answers[0]
         );
+
+        if (choice < 0 || choice >= answers.length) {
+            return null; // סגירה / ביטול
+        }
+        return choice;
     }
+
 }
