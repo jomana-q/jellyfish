@@ -1,5 +1,6 @@
 package view;
 
+import controller.MinesweeperController;
 import model.Board;
 import model.Cell;
 import model.CellType;
@@ -13,6 +14,7 @@ import java.awt.event.MouseEvent;
 /**
  * מסך המשחק – JPanel בתוך החלון הראשי.
  * מכיל שני לוחות (שני שחקנים), ניקוד/חיים משותפים וניהול תורות.
+ * ה-View לא מפעיל ישירות את המודל – הוא מדבר עם MinesweeperController.
  */
 public class MinesweeperGUI extends JPanel {
 
@@ -23,13 +25,14 @@ public class MinesweeperGUI extends JPanel {
     private final String player1Name;
     private final String player2Name;
 
-    private boolean player1Turn = true; // true = תור שחקן 1, false = שחקן 2
+    // הבקר – מוזן מבחוץ (MainMenuGUI)
+    private MinesweeperController controller;
 
     private JButton[][] buttons1;
     private JButton[][] buttons2;
 
-    private JPanel boardPanel1;
-    private JPanel boardPanel2;
+    JPanel boardPanel1;
+    JPanel boardPanel2;
 
     private JLabel player1Label;
     private JLabel player2Label;
@@ -51,6 +54,17 @@ public class MinesweeperGUI extends JPanel {
         initUI();
         refreshView();
     }
+
+    /**
+     * חיבור הבקר ל-View (נקרה מתוך MainMenuGUI).
+     */
+    public void setController(MinesweeperController controller) {
+        this.controller = controller;
+        // אחרי שיש בקר, כדאי לעדכן הדגשת תור
+        updateTurnHighlight();
+    }
+
+    // --- בניית UI ---
 
     private void initUI() {
         setOpaque(false);
@@ -109,7 +123,7 @@ public class MinesweeperGUI extends JPanel {
 
         add(boardsContainer, BorderLayout.CENTER);
 
-        // עדכון תאורה / Enabled לפי תור
+        // הדגשת תור ראשונית (לפני שהבקר מוזן – מניחים שחקן 1)
         updateTurnHighlight();
     }
 
@@ -123,7 +137,7 @@ public class MinesweeperGUI extends JPanel {
         JButton[][] buttons = new JButton[rows][cols];
 
         // חישוב גודל הפונט לפי כמות השורות (ככל שיש יותר שורות, הפונט קטן יותר)
-        int fontSize = 22; 
+        int fontSize = 22;
         if (rows > 15) fontSize = 12;      // Hard (16x16)
         else if (rows > 10) fontSize = 16; // Medium (13x13)
 
@@ -131,10 +145,8 @@ public class MinesweeperGUI extends JPanel {
             for (int c = 0; c < cols; c++) {
                 JButton btn = new JButton();
                 btn.setMargin(new Insets(0, 0, 0, 0));
-                
-                // שימוש בגודל הפונט שחישבנו
+
                 btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, fontSize));
-                
                 btn.setFocusPainted(false);
 
                 final int row = r;
@@ -144,15 +156,17 @@ public class MinesweeperGUI extends JPanel {
                 btn.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mousePressed(MouseEvent e) {
+                        if (controller == null) return;
+
                         // לוח לא בתור -> אין גישה
-                        if (isFirst != player1Turn) {
+                        if (isFirst != controller.isPlayer1Turn()) {
                             return;
                         }
 
                         if (SwingUtilities.isLeftMouseButton(e)) {
-                            handleLeftClick(board, row, col);
+                            controller.handleLeftClick(isFirst, row, col);
                         } else if (SwingUtilities.isRightMouseButton(e)) {
-                            handleRightClick(board, row, col);
+                            controller.handleRightClick(isFirst, row, col);
                         }
                     }
                 });
@@ -168,76 +182,43 @@ public class MinesweeperGUI extends JPanel {
             buttons2 = buttons;
         }
 
-        panel.setBorder(BorderFactory.createLineBorder(new Color(255, 255, 255, 40), 2, true));
+        panel.setBorder(
+                BorderFactory.createLineBorder(new Color(255, 255, 255, 40), 2, true)
+        );
 
         return panel;
-    }
-    // ---------- לוגיקת הקליקים ----------
-
-    private void handleLeftClick(Board board, int row, int col) {
-        // אם ניתן להפעיל שאלה/הפתעה (כלומר כבר נחשפה ולא הופעלה) – זה קליק שני
-        if (board.canActivateSpecial(row, col)) {
-            Cell cell = board.getCell(row, col);
-
-            if (cell.getType() == CellType.SURPRISE) {
-                // הפתעה: משלמים מחיר, ואז 50-50 טוב/רע
-                boolean good = Math.random() < 0.5;
-                session.applySurprise(good);
-                board.markSpecialUsed(row, col);
-            } else if (cell.getType() == CellType.QUESTION) {
-                // כאן בעתיד יופיע מסך שאלה אמיתי מה-CSV
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Question activation – to be implemented.\n(קליק שני מפעיל את השאלה)",
-                        "Question",
-                        JOptionPane.INFORMATION_MESSAGE
-                );
-                board.markSpecialUsed(row, col);
-            }
-
-        } else {
-            // קליק ראשון – חשיפת תא רגילה (כולל ריק/מספר/מוקש/שאלה/הפתעה)
-            board.openCell(row, col, session);
-        }
-
-        endTurnAndRefresh();
-    }
-
-    private void handleRightClick(Board board, int row, int col) {
-        board.toggleFlag(row, col, session);
-        endTurnAndRefresh();
-    }
-
-    /** סוף תור – רענון מסך, בדיקת חיים, מעבר תור */
-    private void endTurnAndRefresh() {
-        refreshView();
-
-        if (session.isOutOfLives()) {
-            showGameOver();
-            return;
-        }
-
-        // מעבר תור
-        player1Turn = !player1Turn;
-        updateTurnHighlight();
     }
 
     // ---------- רענון ה-GUI ----------
 
     public void refreshView() {
-    	updateBoardView(board1, buttons1, new Color(100, 149, 237)); 
-        updateBoardView(board2, buttons2, new Color(72, 209, 204)); 
+        boolean p1Turn = (controller == null) || controller.isPlayer1Turn();
 
-        livesLabel.setText("Lives: " + session.getLives()+ " ❤️");
+        // צבע בסיס לכל לוח
+        Color board1Color = new Color(100, 149, 237); // cornflower blue
+        Color board2Color = new Color(72, 209, 204);  // turquoise
+
+        updateBoardView(board1, buttons1, board1Color, p1Turn);
+        updateBoardView(board2, buttons2, board2Color, !p1Turn);
+
+        livesLabel.setText("Lives: " + session.getLives() + " ❤️");
         scoreLabel.setText("Score: " + session.getScore());
-        turnLabel.setText("Turn: " + (player1Turn ? player1Name : player2Name));
+
+        turnLabel.setText("Turn: " + (p1Turn ? player1Name : player2Name));
     }
 
-    
-     private void updateBoardView(Board board, JButton[][] buttons, Color playerColor) {
+    /**
+     * צביעה וריענון של לוח בודד.
+     * @param playerColor צבע הבסיס של השחקן
+     * @param active האם זה הלוח שבתור כרגע
+     */
+    private void updateBoardView(Board board, JButton[][] buttons, Color playerColor, boolean active) {
         if (buttons == null) return;
         int rows = board.getRows();
         int cols = board.getCols();
+
+        // אם הלוח לא פעיל – נייצר גוון קצת כהה יותר של אותו צבע
+        Color baseColor = active ? playerColor : darker(playerColor, 0.6);
 
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
@@ -251,12 +232,11 @@ public class MinesweeperGUI extends JPanel {
                     } else {
                         btn.setText("");
                     }
-                    //  שימוש בצבע שהתקבל במקום הצבע הקבוע
-                    btn.setBackground(playerColor);
+                    btn.setBackground(baseColor);
                     btn.setForeground(Color.WHITE);
 
                 } else {
-                    // תא נחשף 
+                    // תא נחשף
                     switch (cell.getType()) {
                         case MINE:
                             btn.setText("💣");
@@ -290,9 +270,17 @@ public class MinesweeperGUI extends JPanel {
         }
     }
 
+    /** יצירת צבע כהה יותר מאותו צבע בסיס */
+    private Color darker(Color c, double factor) {
+        int r = (int) (c.getRed() * factor);
+        int g = (int) (c.getGreen() * factor);
+        int b = (int) (c.getBlue() * factor);
+        return new Color(r, g, b);
+    }
+
     /** הדגשה של הלוח שבתור + נעילת הלוח השני */
-    private void updateTurnHighlight() {
-        boolean p1Active = player1Turn;
+    public void updateTurnHighlight() {
+        boolean p1Active = (controller == null) || controller.isPlayer1Turn();
 
         setBoardEnabled(buttons1, p1Active);
         setBoardEnabled(buttons2, !p1Active);
@@ -305,8 +293,16 @@ public class MinesweeperGUI extends JPanel {
         Color activeBorder = new Color(255, 255, 255, 180);
         Color inactiveBorder = new Color(255, 255, 255, 40);
 
-        boardPanel1.setBorder(BorderFactory.createLineBorder(p1Active ? activeBorder : inactiveBorder, 3, true));
-        boardPanel2.setBorder(BorderFactory.createLineBorder(!p1Active ? activeBorder : inactiveBorder, 3, true));
+        if (boardPanel1 != null) {
+            boardPanel1.setBorder(
+                    BorderFactory.createLineBorder(p1Active ? activeBorder : inactiveBorder, 3, true)
+            );
+        }
+        if (boardPanel2 != null) {
+            boardPanel2.setBorder(
+                    BorderFactory.createLineBorder(!p1Active ? activeBorder : inactiveBorder, 3, true)
+            );
+        }
 
         turnLabel.setText("Turn: " + (p1Active ? player1Name : player2Name));
     }
@@ -316,10 +312,7 @@ public class MinesweeperGUI extends JPanel {
         for (JButton[] row : buttons) {
             for (JButton b : row) {
                 b.setEnabled(enabled);
-                // קצת שינוי צבע כשהלוח כבוי
-                if (!enabled) {
-                    b.setBackground(new Color(20, 40, 60));
-                }
+                // לא נוגעים ברקע כאן כדי לשמור על הצבע הייחודי של כל לוח
             }
         }
     }
