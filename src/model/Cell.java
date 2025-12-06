@@ -7,7 +7,6 @@ public class Cell {
     private boolean flagged;      // האם מסומן בדגל
     private int adjacentMines;    // מספר מוקשים מסביב (אם NUMBER)
     private boolean powerUsed;    // האם הופעלה כבר (Question/Surprise)
-    private boolean used;
 
     public Cell(CellType type) {
         this.type = type;
@@ -56,7 +55,4 @@ public class Cell {
     public void setPowerUsed(boolean powerUsed) {
         this.powerUsed = powerUsed;
     }
-
-    public boolean isUsed() { return used; }
-    public void setUsed(boolean u) { used = u; }
 }

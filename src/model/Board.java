@@ -146,14 +146,7 @@ public class Board {
 
     // ---------- לוגיקת משחק – איטרציה 1 ----------
 
-    /**
-     * חשיפת תא ע"י השחקן.
-     * לפי האפיון:
-     *  - MINE   → hearts-1
-     *  - EMPTY / NUMBER / QUESTION / SURPRISE → pts+1
-     *  - EMPTY → מפעיל קסקדה של ריקים (וגם מספרים מסביבם)
-     */
- // חשיפת תא ע"י השחקן
+    /** חשיפת תא ע"י השחקן. */
     public void openCell(int row, int col, GameSession session) {
         if (!isInBounds(row, col)) {
             return;
@@ -230,10 +223,9 @@ public class Board {
 
     /**
      * סימון / ביטול סימון בדגל.
-     * לפי האפיון:
-     *  - Mine   מסומן בדגל → pts+1  + חשיפת המוקש
-     *  - Number / Empty / Question / Surprise מסומנים בדגל → pts-3
-     * ביטול סימון: בלי שינוי ניקוד.
+     *  - Mine מסומן בדגל → pts+1  + חשיפת המוקש
+     *  - מספר / ריק / שאלה / הפתעה מסומנים בדגל → pts-3
+     *  - ביטול סימון: בלי שינוי ניקוד.
      */
     public void toggleFlag(int row, int col, GameSession session) {
         Cell cell = getCell(row, col);
@@ -272,7 +264,7 @@ public class Board {
      * בדיקה אם ניתן להפעיל משבצת שאלה/הפתעה:
      *  - התא נחשף
      *  - הוא Question או Surprise
-     *  - הוא עוד לא הופעל (USED)
+     *  - הוא עוד לא הופעל (powerUsed=false)
      */
     public boolean canActivateSpecial(int row, int col) {
         Cell cell = getCell(row, col);
@@ -287,54 +279,56 @@ public class Board {
         Cell cell = getCell(row, col);
         cell.setPowerUsed(true);
     }
+
+    // פונקציה אופציונלית – חישוב ניקוד לדגל (אם תרצי להשתמש בה במקום toggleFlag)
     public FlagResult flagCell(int row, int col) {
         Cell cell = grid[row][col];
 
         if (cell.isRevealed()) {
-            return new FlagResult(false, "model.Cell already revealed", 0);
+            return new FlagResult(false, "Cell already revealed", 0);
         }
 
         if (cell.isFlagged()) {
-            return new FlagResult(false, "model.Cell already flagged", 0);
+            return new FlagResult(false, "Cell already flagged", 0);
         }
 
         cell.setFlagged(true);
 
-        int points = 0;
-
+        int points;
         switch (cell.getType()) {
             case MINE:
                 points = +1;
                 break;
-
             case NUMBER:
             case EMPTY:
             case QUESTION:
             case SURPRISE:
                 points = -3;
                 break;
+            default:
+                points = 0;
         }
 
         return new FlagResult(true, "Flagged", points);
     }
 
-
+    // פונקציה אופציונלית – הפעלת שאלה/הפתעה עם ניקוד ולבבות
     public ActivationResult activateCell(int row, int col, Difficulty difficulty) {
         Cell cell = grid[row][col];
 
         if (!cell.isRevealed()) {
-            return new ActivationResult(false, "model.Cell must be revealed first", 0, 0);
+            return new ActivationResult(false, "Cell must be revealed first", 0, 0);
         }
 
-        if (cell.isUsed()) {
-            return new ActivationResult(false, "model.Cell already used", 0, 0);
+        if (cell.isPowerUsed()) {
+            return new ActivationResult(false, "Cell already used", 0, 0);
         }
 
         if (cell.getType() != CellType.QUESTION && cell.getType() != CellType.SURPRISE) {
-            return new ActivationResult(false, "model.Cell cannot be activated", 0, 0);
+            return new ActivationResult(false, "Cell cannot be activated", 0, 0);
         }
 
-        // עלות הפעלה
+        // עלות הפעלה לפי רמת קושי
         int cost = switch (difficulty) {
             case EASY -> 5;
             case MEDIUM -> 8;
@@ -344,7 +338,7 @@ public class Board {
         int points = -cost;
         int hearts = 0;
 
-        // אם זו הפתעה → 50/50
+        // אם זו הפתעה → 50/50 טוב/רע
         if (cell.getType() == CellType.SURPRISE) {
             boolean good = Math.random() < 0.5;
 
@@ -365,8 +359,8 @@ public class Board {
             }
         }
 
-        // סימון כ־USED
-        cell.setUsed(true);
+        // סימון התא כמשומש
+        cell.setPowerUsed(true);
 
         return new ActivationResult(true, "Activated", points, hearts);
     }
