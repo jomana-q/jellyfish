@@ -31,8 +31,8 @@ public class MinesweeperGUI extends JPanel {
     private JButton[][] buttons1;
     private JButton[][] buttons2;
 
-    JPanel boardPanel1;
-    JPanel boardPanel2;
+    private JPanel boardPanel1;
+    private JPanel boardPanel2;
 
     private JLabel player1Label;
     private JLabel player2Label;
@@ -56,7 +56,7 @@ public class MinesweeperGUI extends JPanel {
     }
 
     /**
-     * חיבור הבקר ל-View (נקרה מתוך MainMenuGUI).
+     * חיבור הבקר ל-View (נקרא מתוך MainMenuGUI).
      */
     public void setController(MinesweeperController controller) {
         this.controller = controller;
@@ -203,7 +203,6 @@ public class MinesweeperGUI extends JPanel {
 
         livesLabel.setText("Lives: " + session.getLives() + " ❤️");
         scoreLabel.setText("Score: " + session.getScore());
-
         turnLabel.setText("Turn: " + (p1Turn ? player1Name : player2Name));
     }
 
@@ -328,6 +327,18 @@ public class MinesweeperGUI extends JPanel {
                 this,
                 "Game over!\nScore: " + session.getScore(),
                 "Game Over",
+                JOptionPane.INFORMATION_MESSAGE
+        );
+    }
+
+    /**
+     * כרגע רק Placeholder להפעלת שאלה – בעתיד תחברי למסך שאלות אמיתי.
+     */
+    public void showQuestionPlaceholder(int row, int col) {
+        JOptionPane.showMessageDialog(
+                this,
+                "Question activation – to be implemented.\n(קליק שני מפעיל את השאלה)",
+                "Question",
                 JOptionPane.INFORMATION_MESSAGE
         );
     }

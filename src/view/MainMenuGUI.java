@@ -165,6 +165,8 @@ public class MainMenuGUI extends JFrame {
         centerLayout.show(centerContainer, "GAME");
     }
 
+
+
     // --- פונקציות עיצוב כפתורים מתוקנות (Fix for White Box Issue) ---
 
     private JButton createStyledButton(String text) {
