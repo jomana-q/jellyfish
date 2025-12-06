@@ -1,5 +1,6 @@
 package view;
 
+import controller.MinesweeperController;
 import model.Board;
 import model.Difficulty;
 import model.GameSession;
@@ -154,8 +155,13 @@ public class MainMenuGUI extends JFrame {
         GameSession session = new GameSession(difficulty);
 
         gamePanel = new MinesweeperGUI(player1Name, player2Name, board1, board2, session);
-        centerContainer.add(gamePanel, "GAME");
 
+        // יצירת הבקר וחיבורו ל-GUI (MVC)
+        MinesweeperController controller =
+                new MinesweeperController(board1, board2, session, gamePanel);
+        gamePanel.setController(controller);
+
+        centerContainer.add(gamePanel, "GAME");
         centerLayout.show(centerContainer, "GAME");
     }
 
