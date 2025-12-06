@@ -374,5 +374,9 @@ public class Board {
         return new ActivationResult(true, "Activated", points, hearts);
     }
 
+<<<<<<< Updated upstream
+}
+>>>>>>> Stashed changes
+=======
 }
 >>>>>>> Stashed changes
