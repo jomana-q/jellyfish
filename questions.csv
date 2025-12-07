@@ -1,5 +1,5 @@
-ID	Question	Difficulty	A	B	C	D	Correct Answer
-1	Which diagram describes system structure?	1	Class Diagram	Sequence Diagram	State Diagram	Use-Case Flow	A
-2	What does UML stand for?	1	Unified Modeling Language	User Machine Link	Universal Model Layout	Unmodified Mapping Logic	A
-3	What is the main purpose of Requirements Analysis?	1	To write code	To understand what the customer needs	To design test cases	To evaluate staff performance	B
-4	"In MVC, which component handles user actions?"	1	Model	View	Controller	Database	C
+ID,Question,Difficulty,A,B,C,D,Correct Answer
+1, Which diagram describes system structure?,1, Class Diagram, Sequence Diagram ,State Diagram,Use-Case Flow,A
+2, What does UML stand for?,1, Unified Modeling Language , User Machine Link, Universal Model Layout,Unmodified Mapping Logic,A
+3, In MVC which component handles user actions?,1, Model ,View ,Controller,Database,C
+4,What is the main purpose of Requirements Analysis?,1,To write code, To understand what the customer needs ,To design test cases,To evaluate staff performance,B
