@@ -364,4 +364,46 @@ public class Board {
 
         return new ActivationResult(true, "Activated", points, hearts);
     }
+    
+    public boolean revealRandomMine() {
+        List<int[]> hiddenMines = new ArrayList<>();
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                Cell cell = grid[r][c];
+                if (cell.getType() == CellType.MINE && !cell.isRevealed()) {
+                    hiddenMines.add(new int[]{r, c});
+                }
+            }
+        }
+
+        if (hiddenMines.isEmpty()) return false;
+
+        int[] pos = hiddenMines.get(random.nextInt(hiddenMines.size()));
+        grid[pos[0]][pos[1]].setRevealed(true);
+
+        return true;
+    }
+    
+    public void revealRandom3x3(GameSession session) {
+        int r = random.nextInt(rows);
+        int c = random.nextInt(cols);
+
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                int nr = r + dr;
+                int nc = c + dc;
+
+                if (!isInBounds(nr, nc)) continue;
+
+                Cell cell = grid[nr][nc];
+                if (!cell.isRevealed() && !cell.isFlagged()) {
+                    // השימוש ב-openCell מבטיח שקבלת נקודות תהיה תקינה
+                    openCell(nr, nc, session);
+                }
+            }
+        }
+    }
+
+
 }
