@@ -21,7 +21,9 @@ public class MainMenuGUI extends JFrame {
     private JPanel mainMenuCenterPanel;     // המסך הראשי (Start Game / Admin)
     private GameSetupPanel setupPanel;      // מסך שמות + קושי
     private MinesweeperGUI gamePanel;       // מסך המשחק (שני לוחות)
-
+    private AdminLoginPanel adminLoginPanel; // מסך התחברות אדמין
+    private JPanel adminDashboardPanel;      // מסך דשבורד אדמין
+   
     public MainMenuGUI() {
         // 1. הגדרות חלון (מותאם למחשב PC)
         setTitle("Minesweeper - Jellyfish Team");
@@ -123,10 +125,63 @@ public class MainMenuGUI extends JFrame {
 
         JButton adminBtn = createStyledButton("Admin Login");
         adminBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        adminBtn.addActionListener(e -> openAdminDashboard());
+        adminBtn.addActionListener(e -> showAdminLogin());
         centerPanel.add(adminBtn);
 
         return centerPanel;
+    }
+    /** מעבר למסך התחברות אדמין */
+    private void showAdminLogin() {
+        if (adminLoginPanel == null) {
+            adminLoginPanel = new AdminLoginPanel(this);
+            centerContainer.add(adminLoginPanel, "ADMIN_LOGIN");
+        }
+        centerLayout.show(centerContainer, "ADMIN_LOGIN");
+    }
+
+    /** אחרי התחברות מוצלחת – מסך דשבורד אדמין */
+    public void showAdminDashboard() {
+        if (adminDashboardPanel == null) {
+            adminDashboardPanel = buildAdminDashboardPanel();
+            centerContainer.add(adminDashboardPanel, "ADMIN_DASH");
+        }
+        centerLayout.show(centerContainer, "ADMIN_DASH");
+    }
+
+    private JPanel buildAdminDashboardPanel() {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(40, 80, 40, 80));
+
+        JLabel title = new JLabel("Admin Dashboard", SwingConstants.CENTER);
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
+        title.setForeground(Color.WHITE);
+        title.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        panel.add(title);
+
+        panel.add(Box.createVerticalStrut(40));
+
+        JButton manageQuestionsBtn = createStyledButton("Manage Questions");
+        manageQuestionsBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // TODO: בהמשך – לפתוח QuestionManagerPanel
+        panel.add(manageQuestionsBtn);
+
+        panel.add(Box.createVerticalStrut(20));
+
+        JButton historyBtn = createStyledButton("Game History");
+        historyBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // TODO: בהמשך – לפתוח HistoryPanel
+        panel.add(historyBtn);
+
+        panel.add(Box.createVerticalStrut(40));
+
+        JButton backBtn = createStyledButton("Back to Main Menu");
+        backBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        backBtn.addActionListener(e -> showMainMenu());
+        panel.add(backBtn);
+
+        return panel;
     }
 
     // ---- ניהול מסכים ----
