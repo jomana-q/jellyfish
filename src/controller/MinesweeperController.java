@@ -6,6 +6,7 @@ import model.CellType;
 import model.GameSession;
 import model.Question;
 import model.QuestionBank;
+import model.QuestionBonusEffect;
 import view.MinesweeperGUI;
 import view.QuestionDialog;
 
@@ -74,12 +75,16 @@ public class MinesweeperController {
                     // --- שמירה של מצב לפני השאלה ---
                     int beforeScore = session.getScore();
                     int beforeLives = session.getLives();
+                    
+             /*    // דיבוג: להדפיס לקונסול מה רמת המשחק ומה רמת השאלה
+                    System.out.println("DEBUG Question: game difficulty = " + session.getDifficulty()
+                            + ", question level = " + q.getLevel());*/
 
                     // מציגים חלון שאלה – מחזיר true אם ענו נכון
                     boolean correct = QuestionDialog.showQuestionDialog(view, q);
 
-                    // מעדכן לבבות/ניקוד לפי רמת השאלה והתשובה
-                    session.applyQuestionResult(q.getLevel(), correct);
+                 // מעדכן לבבות/ניקוד לפי רמת השאלה והתשובה
+                    QuestionBonusEffect bonus = session.applyQuestionResult(q.getLevel(), correct);
 
                     // --- חישוב השינויים לצורך הודעה ---
                     int afterScore = session.getScore();

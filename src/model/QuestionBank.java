@@ -96,26 +96,33 @@ public class QuestionBank {
                             data[6].trim()  // D
                     };
 
-                    // Difficulty: 1=EASY, 2=MEDIUM, 3=HARD
-                    int diffNum = Integer.parseInt(data[2].trim());
-                    Difficulty level;
-                    if (diffNum == 1) {
-                        level = Difficulty.EASY;
-                    } else if (diffNum == 2) {
-                        level = Difficulty.MEDIUM;
-                    } else {
-                        level = Difficulty.HARD;
-                    }
+                 // Difficulty column in CSV for the QUESTION:
+                 // 1 = EASY, 2 = MEDIUM, 3 = HARD, 4 = EXPERT
+                 int levelNum = Integer.parseInt(data[2].trim());
 
-                    // Correct Answer: אות A/B/C/D → אינדקס 0–3
-                    int correctIdx = letterToIndex(data[7].trim());
-                    if (correctIdx < 0 || correctIdx > 3) {
-                        System.err.println("Systems: bad correct answer letter in row " + row
-                                + ": " + data[7]);
-                        continue;
-                    }
+                 QuestionLevel level;
+                 switch (levelNum) {
+                     case 1 -> level = QuestionLevel.EASY;
+                     case 2 -> level = QuestionLevel.MEDIUM;
+                     case 3 -> level = QuestionLevel.HARD;
+                     case 4 -> level = QuestionLevel.EXPERT;
+                     default -> {
+                         System.err.println("Systems: unknown question level number: " + levelNum
+                                 + " , using MEDIUM as default.");
+                         level = QuestionLevel.MEDIUM;
+                     }
+                 }
 
-                    questions.add(new Question(qText, answers, correctIdx, level));
+                 // Correct Answer: A/B/C/D → index 0–3
+                 int correctIdx = letterToIndex(data[7].trim());
+                 if (correctIdx < 0 || correctIdx > 3) {
+                     System.err.println("Systems: bad correct answer letter in row " + row
+                             + ": " + data[7]);
+                     continue;
+                 }
+
+                 // יצירת השאלה עם QuestionLevel
+                 questions.add(new Question(qText, answers, correctIdx, level));
 
                 } catch (Exception e) {
                     System.err.println("Systems: error parsing row " + row + ": " + line);
