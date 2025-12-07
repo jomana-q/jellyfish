@@ -85,6 +85,16 @@ public class MinesweeperController {
 
                  // מעדכן לבבות/ניקוד לפי רמת השאלה והתשובה
                     QuestionBonusEffect bonus = session.applyQuestionResult(q.getLevel(), correct);
+                    
+                    if (bonus == QuestionBonusEffect.REVEAL_MINE) {
+                        board.revealRandomMine();
+                    }
+
+                    if (bonus == QuestionBonusEffect.REVEAL_3X3) {
+                        board.revealRandom3x3(session);
+                    }
+                    
+                    view.refreshView();
 
                     // --- חישוב השינויים לצורך הודעה ---
                     int afterScore = session.getScore();
