@@ -33,7 +33,7 @@ public class QuestionManagementPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // --- כותרת ---
-        JLabel titleLabel = new JLabel("ניהול שאלות (Question Wizard)", SwingConstants.CENTER);
+        JLabel titleLabel = new JLabel("Question Wizard", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(Color.WHITE);
         add(titleLabel, BorderLayout.NORTH);
@@ -64,11 +64,11 @@ public class QuestionManagementPanel extends JPanel {
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
         buttonsPanel.setOpaque(false);
 
-        JButton addBtn = createButton("הוסף שאלה");
-        JButton editBtn = createButton("ערוך נבחר");
-        JButton deleteBtn = createButton("מחק נבחר");
-        JButton saveBtn = createButton("שמור שינויים ל-CSV");
-        JButton backBtn = createButton("חזרה");
+        JButton addBtn = createButton("Add qustion ");
+        JButton editBtn = createButton("Edit");
+        JButton deleteBtn = createButton("Delete");
+        JButton saveBtn = createButton("Save changes to CSV");
+        JButton backBtn = createButton("back");
 
         // צבע מיוחד לכפתור שמירה
         saveBtn.setBackground(new Color(60, 140, 60));
@@ -91,7 +91,7 @@ public class QuestionManagementPanel extends JPanel {
         editBtn.addActionListener(e -> {
             int selectedRow = table.getSelectedRow();
             if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(this, "יש לבחור שורה בטבלה לעריכה.");
+                JOptionPane.showMessageDialog(this, "יSelect a row in the table to edit.");
                 return;
             }
             showQuestionDialog(selectedRow);
@@ -101,12 +101,22 @@ public class QuestionManagementPanel extends JPanel {
         deleteBtn.addActionListener(e -> {
             int selectedRow = table.getSelectedRow();
             if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(this, "יש לבחור שורה למחיקה.");
+                JOptionPane.showMessageDialog(this, "Please select a row to delete.");
                 return;
             }
-            // הסרת השורה מהמודל (עדיין לא נשמר לקובץ עד שלוחצים שמור)
-            tableModel.removeRow(selectedRow);
-        });
+            int confirm = JOptionPane.showConfirmDialog(
+                    this, 
+                    "Are you sure you want to delete the selected question?", 
+                    "Confirm Delete", 
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+                );
+
+                if (confirm == JOptionPane.YES_OPTION) {
+                	// הסרת השורה מהמודל רק אם המשתמש אישר
+                    tableModel.removeRow(selectedRow);
+                }
+            });          
 
         // 4. שמירת כל הטבלה לקובץ ה-CSV
         saveBtn.addActionListener(e -> saveQuestionsToCSV());
@@ -156,7 +166,7 @@ public class QuestionManagementPanel extends JPanel {
                 }
             }
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "שגיאה בטעינת הקובץ: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading file: " + e.getMessage());
         }
     }
 
@@ -188,11 +198,11 @@ public class QuestionManagementPanel extends JPanel {
                 bw.newLine();
             }
             
-            JOptionPane.showMessageDialog(this, "הנתונים נשמרו בהצלחה לקובץ CSV!");
+            JOptionPane.showMessageDialog(this, "The data was successfully saved to a CSV file!");
             model.QuestionBank.getInstance().reloadQuestions();
             
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "שגיאה בשמירת הקובץ: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error saving file: " + e.getMessage());
         }
     }
 
@@ -203,7 +213,7 @@ public class QuestionManagementPanel extends JPanel {
      * מציג דיאלוג להוספה (rowToEdit=null) או עריכה (rowToEdit=מספר שורה).
      */
     private void showQuestionDialog(Integer rowToEdit) {
-        JDialog dialog = new JDialog(parent, "עורך שאלות", true);
+        JDialog dialog = new JDialog(parent, "Make question", true);
         dialog.setLayout(new GridLayout(9, 2, 10, 10));
         dialog.setSize(500, 450);
         dialog.setLocationRelativeTo(this);
@@ -252,7 +262,7 @@ public class QuestionManagementPanel extends JPanel {
         dialog.add(new JLabel("Answer D:")); dialog.add(ansD);
         dialog.add(new JLabel("Correct Answer:")); dialog.add(correctBox);
 
-        JButton okBtn = new JButton("אישור");
+        JButton okBtn = new JButton("confirmation");
         okBtn.addActionListener(e -> {
             // איסוף הנתונים
             String[] rowData = {
@@ -268,7 +278,7 @@ public class QuestionManagementPanel extends JPanel {
 
             // בדיקה בסיסית שאין שדות ריקים
             if (qField.getText().isEmpty() || ansA.getText().isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "נא למלא את כל השדות.");
+                JOptionPane.showMessageDialog(dialog, "Please fill in all fields.");
                 return;
             }
 
