@@ -232,7 +232,7 @@ public class MainMenuGUI extends JFrame {
         Board board2 = new Board(difficulty);
         GameSession session = new GameSession(difficulty);
 
-        gamePanel = new MinesweeperGUI(player1Name, player2Name, board1, board2, session);
+        gamePanel = new MinesweeperGUI(this, player1Name, player2Name, board1, board2, session);
 
         // יצירת הבקר וחיבורו ל-GUI (MVC)
         MinesweeperController controller =
