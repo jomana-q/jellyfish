@@ -40,6 +40,15 @@ public class MinesweeperGUI extends JPanel {
     private JLabel livesLabel;
     private JLabel scoreLabel;
     private JLabel turnLabel;
+    
+ // --- Getters for Names (To save in History) ---
+    public String getPlayer1Name() {
+        return player1Name;
+    }
+
+    public String getPlayer2Name() {
+        return player2Name;
+    }
 
     public MinesweeperGUI(String player1Name,
                           String player2Name,
