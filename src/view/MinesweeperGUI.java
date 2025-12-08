@@ -4,6 +4,7 @@ import controller.MinesweeperController;
 import model.Board;
 import model.Cell;
 import model.CellType;
+import model.GameHistory;
 import model.GameSession;
 import model.Question;
 
@@ -343,7 +344,7 @@ public class MinesweeperGUI extends JPanel {
 
     // ---------- סיום משחק ----------
 
-    public void showGameOver() {
+    public void showGameOver(boolean success) {
         // 1. המרת כל הלבבות שנותרו לנקודות (סוף משחק)
         session.convertRemainingLivesToScoreAtEnd();
 
@@ -358,14 +359,36 @@ public class MinesweeperGUI extends JPanel {
         setBoardEnabled(buttons1, false);
         setBoardEnabled(buttons2, false);
 
-        // 5. הודעת סיום – משחק שיתופי, מציגים רק את התוצאה הסופית
+        // 5. בניית טקסט התוצאה (Result)
+        String resultLabel = success ? "All mines revealed" : "Out of lives";
+
+        // רמת קושי כמחרוזת (EASY / MEDIUM / HARD)
+        String difficultyText = session.getDifficulty().name();
+
+        // 6. שמירת תוצאה ל-GameHistory
+        GameHistory history = new GameHistory();
+        history.addEntry(
+                player1Name + " & " + player2Name,
+                session.getScore(),
+                difficultyText,
+                resultLabel
+        );
+
+        // 7. הודעת סיום – משחק שיתופי, רק מצב + ניקוד
+        String message =
+                "Game over!\n" +
+                "Result: " + resultLabel + "\n" +
+                "Difficulty: " + difficultyText + "\n" +
+                "Final score: " + session.getScore();
+
         JOptionPane.showMessageDialog(
                 this,
-                "Game over!\nFinal score: " + session.getScore(),
+                message,
                 "Game Over",
                 JOptionPane.INFORMATION_MESSAGE
         );
     }
+
 
 
     /**

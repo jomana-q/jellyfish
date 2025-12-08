@@ -36,7 +36,7 @@ public class HistoryPanel extends JPanel {
         add(titleLabel, BorderLayout.NORTH);
 
         // --- טבלה ---
-        String[] columnNames = {"Player Name", "Score", "Date"};
+        String[] columnNames = {"Player Name", "Score", "Difficulty", "Result", "Date"};
         
         // מודל שלא ניתן לעריכה
         tableModel = new DefaultTableModel(columnNames, 0) {
@@ -78,25 +78,23 @@ public class HistoryPanel extends JPanel {
      * טעינת הנתונים מה-Model (GameHistory) לטבלה.
      */
     private void loadHistoryData() {
-        // יצירת אובייקט שמנהל את ההיסטוריה וטוען מהקובץ
         GameHistory historyHandler = new GameHistory();
-        
-        // קבלת רשימת התוצאות (למשל 10 הטובות ביותר, או אפשר לשנות שיחזיר הכל)
         List<GameHistoryEntry> entries = historyHandler.getTopScores();
 
-        // ניקוי הטבלה
         tableModel.setRowCount(0);
 
-        // הוספת השורות
         for (GameHistoryEntry entry : entries) {
             Object[] rowData = {
                 entry.getPlayerName(),
                 entry.getScore(),
+                entry.getDifficulty(),
+                entry.getResult(),
                 entry.getDate()
             };
             tableModel.addRow(rowData);
         }
     }
+
 
     private void styleButton(JButton btn) {
         btn.setFont(new Font("Segoe UI", Font.BOLD, 16));
