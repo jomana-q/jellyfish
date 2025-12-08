@@ -235,15 +235,14 @@ public class MinesweeperGUI extends JPanel {
                 JButton btn = buttons[r][c];
 
                 if (!cell.isRevealed()) {
-                    // תא לא נחשף עדיין
                     if (cell.isFlagged()) {
-                        btn.setText("⚑");
+                        btn.setText("🚩");
                     } else {
                         btn.setText("");
                     }
                     btn.setBackground(baseColor);
                     btn.setForeground(Color.WHITE);
-
+                    
                 } else {
                     // תא נחשף
                     switch (cell.getType()) {
