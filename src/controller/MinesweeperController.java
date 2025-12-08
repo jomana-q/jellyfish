@@ -49,19 +49,22 @@ public class MinesweeperController {
      */
     public void handleLeftClick(boolean firstBoard, int row, int col) {
         Board board = firstBoard ? board1 : board2;
+        Cell cell = board.getCell(row, col);
+
+        // אם התא כבר נחשף **ואי אפשר** להפעיל בו שאלה/הפתעה -> מתעלמים מהלחיצה
+        if (cell.isRevealed() && !board.canActivateSpecial(row, col)) {
+            return; // לא עושים כלום, לא עובר תור
+        }
 
         // אם זה תא מיוחד שניתן להפעיל (שאלה/הפתעה אחרי שנפתח)
         if (board.canActivateSpecial(row, col)) {
-            Cell cell = board.getCell(row, col);
-
+            // --- הקוד שהיה לך קודם נשאר אותו דבר מכאן והלאה ---
             if (cell.getType() == CellType.SURPRISE) {
-                // הפתעה: 50% טובה / 50% רעה
                 boolean good = Math.random() < 0.5;
                 session.applySurprise(good);
                 board.markSpecialUsed(row, col);
 
             } else if (cell.getType() == CellType.QUESTION) {
-                // שאלה: לוקחים שאלה אקראית מה-CSV
                 Question q = QuestionBank.getInstance().getRandomQuestion();
 
                 if (q == null) {
@@ -72,20 +75,13 @@ public class MinesweeperController {
                             JOptionPane.ERROR_MESSAGE
                     );
                 } else {
-                    // --- שמירה של מצב לפני השאלה ---
                     int beforeScore = session.getScore();
                     int beforeLives = session.getLives();
-                    
-             /*    // דיבוג: להדפיס לקונסול מה רמת המשחק ומה רמת השאלה
-                    System.out.println("DEBUG Question: game difficulty = " + session.getDifficulty()
-                            + ", question level = " + q.getLevel());*/
 
-                    // מציגים חלון שאלה – מחזיר true אם ענו נכון
                     boolean correct = QuestionDialog.showQuestionDialog(view, q);
 
-                 // מעדכן לבבות/ניקוד לפי רמת השאלה והתשובה
                     QuestionBonusEffect bonus = session.applyQuestionResult(q.getLevel(), correct);
-                    
+
                     if (bonus == QuestionBonusEffect.REVEAL_MINE) {
                         board.revealRandomMine();
                     }
@@ -93,10 +89,9 @@ public class MinesweeperController {
                     if (bonus == QuestionBonusEffect.REVEAL_3X3) {
                         board.revealRandom3x3(session);
                     }
-                    
+
                     view.refreshView();
 
-                    // --- חישוב השינויים לצורך הודעה ---
                     int afterScore = session.getScore();
                     int afterLives = session.getLives();
 
@@ -130,7 +125,7 @@ public class MinesweeperController {
             }
 
         } else {
-            // תא רגיל – פתיחה רגילה
+            // תא עדיין לא נחשף – פתיחה רגילה
             board.openCell(row, col, session);
         }
 
@@ -138,14 +133,22 @@ public class MinesweeperController {
     }
 
 
+
     /**
      * לחיצה ימנית – סימון/ביטול דגל.
      */
     public void handleRightClick(boolean firstBoard, int row, int col) {
         Board board = firstBoard ? board1 : board2;
+
+        // אם התא כבר נחשף – לא מסמנים דגל ולא מעבירים תור
+        if (board.getCell(row, col).isRevealed()) {
+            return;
+        }
+
         board.toggleFlag(row, col, session);
         endTurn();
     }
+
 
     /**
      * סיום תור – רענון מסך, בדיקת תנאי סיום, החלפת שחקן.

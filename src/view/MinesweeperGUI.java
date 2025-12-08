@@ -264,15 +264,31 @@ public class MinesweeperGUI extends JPanel {
                             btn.setForeground(Color.BLACK);
                             break;
                         case QUESTION:
-                            btn.setText("?");
-                            btn.setBackground(new Color(200, 180, 230));
-                            btn.setForeground(Color.BLACK);
+                            if (cell.isPowerUsed()) {
+                                // שאלה שכבר הופעלה – מסומן כ-USED
+                                btn.setText("USED");
+                                btn.setBackground(new Color(160, 160, 160)); // אפור
+                                btn.setForeground(Color.WHITE);
+                            } else {
+                                btn.setText("?");
+                                btn.setBackground(new Color(200, 180, 230));
+                                btn.setForeground(Color.BLACK);
+                            }
                             break;
+
                         case SURPRISE:
-                            btn.setText("🎁");
-                            btn.setBackground(new Color(210, 190, 120));
-                            btn.setForeground(Color.BLACK);
+                            if (cell.isPowerUsed()) {
+                                // הפתעה שכבר הופעלה – גם מסומן כ-USED
+                                btn.setText("USED");
+                                btn.setBackground(new Color(160, 160, 160));
+                                btn.setForeground(Color.WHITE);
+                            } else {
+                                btn.setText("🎁");
+                                btn.setBackground(new Color(210, 190, 120));
+                                btn.setForeground(Color.BLACK);
+                            }
                             break;
+
                     }
                 }
             }
