@@ -320,17 +320,29 @@ public class MinesweeperGUI extends JPanel {
     // ---------- סיום משחק ----------
 
     public void showGameOver() {
-        // ננעל את הלוחות
+        // 1. המרת כל הלבבות שנותרו לנקודות (סוף משחק)
+        session.convertRemainingLivesToScoreAtEnd();
+
+        // 2. חשיפת כל התאים בשני הלוחות
+        board1.revealAllCells();
+        board2.revealAllCells();
+
+        // 3. רענון המסך כדי שהשחקנים יראו הכול
+        refreshView();
+
+        // 4. נעילת הלוחות – אין יותר לחיצות
         setBoardEnabled(buttons1, false);
         setBoardEnabled(buttons2, false);
 
+        // 5. הודעת סיום – משחק שיתופי, מציגים רק את התוצאה הסופית
         JOptionPane.showMessageDialog(
                 this,
-                "Game over!\nScore: " + session.getScore(),
+                "Game over!\nFinal score: " + session.getScore(),
                 "Game Over",
                 JOptionPane.INFORMATION_MESSAGE
         );
     }
+
 
     /**
      * מציג חלון שאלה (4 תשובות) ומחזיר את אינדקס התשובה שנבחרה (0-3).

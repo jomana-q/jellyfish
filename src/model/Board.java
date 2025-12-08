@@ -404,6 +404,36 @@ public class Board {
             }
         }
     }
+    
+    /**
+     * בדיקה אם כל המוקשים על הלוח כבר נחשפו.
+     * במשחק שלך, כשמסמנים מוקש בדגל את כבר מסמנת אותו כ-revealed,
+     * לכן מספיק לבדוק שכל התאים מסוג MINE הם revealed.
+     */
+    public boolean allMinesRevealed() {
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                Cell cell = grid[r][c];
+                if (cell.getType() == CellType.MINE && !cell.isRevealed()) {
+                    return false; // עדיין יש מוקש שלא גילו
+                }
+            }
+        }
+        return true; // כל המוקשים גלו
+    }
+    
+    /**
+     * סוף משחק: לחשוף את כל התאים על הלוח,
+     * בלי לעדכן ניקוד / לבבות (רק setRevealed).
+     */
+    public void revealAllCells() {
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                Cell cell = grid[r][c];
+                cell.setRevealed(true);
+            }
+        }
+    }
 
 
 }

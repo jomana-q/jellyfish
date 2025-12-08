@@ -148,17 +148,28 @@ public class MinesweeperController {
     }
 
     /**
-     * סיום תור – רענון מסך, בדיקת חיים, החלפת שחקן.
+     * סיום תור – רענון מסך, בדיקת תנאי סיום, החלפת שחקן.
      */
     private void endTurn() {
+        // קודם מרעננים את התצוגה
         view.refreshView();
 
+        // תנאי סיום 1: אחד הלוחות גילה את כל המוקשים שלו
+        if (board1.allMinesRevealed() || board2.allMinesRevealed()) {
+            view.showGameOver();
+            return;
+        }
+
+        // תנאי סיום 2: אין יותר לבבות משותפים
         if (session.isOutOfLives()) {
             view.showGameOver();
             return;
         }
 
+        // אם המשחק לא הסתיים – מחליפים תור
         player1Turn = !player1Turn;
         view.updateTurnHighlight();
     }
+
+
 }
