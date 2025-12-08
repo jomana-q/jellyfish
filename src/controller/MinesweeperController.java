@@ -139,16 +139,24 @@ public class MinesweeperController {
      */
     public void handleRightClick(boolean firstBoard, int row, int col) {
         Board board = firstBoard ? board1 : board2;
+        Cell cell = board.getCell(row, col);
 
-        // אם התא כבר נחשף – לא מסמנים דגל ולא מעבירים תור
-        if (board.getCell(row, col).isRevealed()) {
+        // אם התא כבר נחשף – אין דגלים עליו
+        if (cell.isRevealed()) {
             return;
         }
 
+        // אם זו משבצת מיוחדת שכבר הופעלה (USED) – לא מסמנים עליה דגל
+        if (cell.isPowerUsed()) {
+            return;
+        }
+
+        // כאן באמת מסמנים / מבטלים דגל + מעדכנים ניקוד לפי הטבלה
         board.toggleFlag(row, col, session);
+
+        // רענון מסך + מעבר תור
         endTurn();
     }
-
 
     /**
      * סיום תור – רענון מסך, בדיקת תנאי סיום, החלפת שחקן.
