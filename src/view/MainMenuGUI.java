@@ -164,15 +164,17 @@ public class MainMenuGUI extends JFrame {
 
         JButton manageQuestionsBtn = createStyledButton("Manage Questions");
         manageQuestionsBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        // TODO: בהמשך – לפתוח QuestionManagerPanel
+        
+        // --- השינוי כאן: הוספת פעולה לכפתור שפותחת את אשף השאלות ---
+        manageQuestionsBtn.addActionListener(e -> showQuestionWizard());
+        
         panel.add(manageQuestionsBtn);
 
         panel.add(Box.createVerticalStrut(20));
 
         JButton historyBtn = createStyledButton("Game History");
         historyBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        // TODO: בהמשך – לפתוח HistoryPanel
-        panel.add(historyBtn);
+        historyBtn.addActionListener(e -> showHistoryPanel());        panel.add(historyBtn);
 
         panel.add(Box.createVerticalStrut(40));
 
@@ -183,7 +185,28 @@ public class MainMenuGUI extends JFrame {
 
         return panel;
     }
-
+    /**
+     * פונקציה למעבר למסך ניהול השאלות (Wizard).
+     * יוצרת את המסך מחדש בכל כניסה כדי לוודא שהנתונים עדכניים.
+     */
+    public void showQuestionWizard() {
+        // יצירת פאנל הניהול והעברת "this" (החלון הראשי) כפרמטר
+        QuestionManagementPanel wizardPanel = new QuestionManagementPanel(this);
+        
+        // הוספה ל-CardLayout בשם "WIZARD"
+        centerContainer.add(wizardPanel, "WIZARD");
+        
+        // מעבר למסך הזה
+        centerLayout.show(centerContainer, "WIZARD");
+    }
+    /**
+     * מעבר למסך היסטוריית המשחקים.
+     */
+    public void showHistoryPanel() {
+        HistoryPanel historyPanel = new HistoryPanel(this);
+        centerContainer.add(historyPanel, "HISTORY");
+        centerLayout.show(centerContainer, "HISTORY");
+    }
     // ---- ניהול מסכים ----
 
     /** חזרה למסך הראשי */

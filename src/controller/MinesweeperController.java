@@ -162,6 +162,7 @@ public class MinesweeperController {
 
         // תנאי סיום 2: אין יותר לבבות משותפים
         if (session.isOutOfLives()) {
+        	saveGameResult();
             view.showGameOver();
             return;
         }
@@ -170,6 +171,20 @@ public class MinesweeperController {
         player1Turn = !player1Turn;
         view.updateTurnHighlight();
     }
-
-
+    
+    /**
+     * שמירת תוצאת המשחק להיסטוריה.
+     */
+    private void saveGameResult() {
+        // 1. יצירת אובייקט היסטוריה
+        model.GameHistory history = new model.GameHistory();
+        
+        // 2. חיבור שמות השחקנים למחרוזת אחת (כי ה-Entry מקבל שם אחד)
+        String combinedNames = view.getPlayer1Name() + " & " + view.getPlayer2Name();
+        
+        // 3. שמירה (הוספת שורה לקובץ ה-CSV)
+        history.addEntry(combinedNames, session.getScore());
+        
+        System.out.println("Game saved to history: " + combinedNames + " - " + session.getScore());
+    }
 }
