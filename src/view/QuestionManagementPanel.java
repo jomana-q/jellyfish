@@ -189,6 +189,7 @@ public class QuestionManagementPanel extends JPanel {
             }
             
             JOptionPane.showMessageDialog(this, "הנתונים נשמרו בהצלחה לקובץ CSV!");
+            model.QuestionBank.getInstance().reloadQuestions();
             
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this, "שגיאה בשמירת הקובץ: " + e.getMessage());

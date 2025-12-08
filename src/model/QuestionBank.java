@@ -159,4 +159,14 @@ public class QuestionBank {
         }
         return questions.get(random.nextInt(questions.size()));
     }
+    
+    /**
+     * פונקציה לטעינה מחדש של השאלות מהקובץ תוך כדי ריצה.
+     * נקראת אחרי שהאדמין שומר שינויים, כדי שהמשחק יתעדכן מיידית.
+     */
+    public void reloadQuestions() {
+        this.questions.clear(); // ניקוי הרשימה הישנה מהזיכרון
+        loadQuestionsFromCSV(); // טעינת הנתונים מחדש מקובץ ה-CSV
+        System.out.println("System: Questions reloaded successfully. Total: " + questions.size());
+    }
 }
