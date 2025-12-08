@@ -8,42 +8,47 @@ import java.time.format.DateTimeFormatter;
  * שומרת את שם השחקן, הניקוד והתאריך שבו המשחק הסתיים.
  */
 public class GameHistoryEntry {
-    
+
     private String playerName;
     private int score;
+    private String difficulty; // NEW
+    private String result;     // NEW
     private String date;
 
-    /**
-     * בנאי ליצירת רשומה חדשה בסיום משחק (התאריך נוצר אוטומטית).
-     */
-    public GameHistoryEntry(String playerName, int score) {
+    // בנאי חדש למשחק חדש שנשמר עכשיו
+    public GameHistoryEntry(String playerName, int score,
+                            String difficulty, String result) {
         this.playerName = playerName;
         this.score = score;
-        // יצירת תאריך ושעה נוכחיים בפורמט קריא
+        this.difficulty = difficulty;
+        this.result = result;
+
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
         this.date = dtf.format(LocalDateTime.now());
     }
 
-    /**
-     * בנאי לטעינת רשומה קיימת מהקובץ.
-     */
-    public GameHistoryEntry(String playerName, int score, String date) {
+    // בנאי לטעינה מקובץ (עם כל השדות)
+    public GameHistoryEntry(String playerName, int score,
+                            String difficulty, String result,
+                            String date) {
         this.playerName = playerName;
         this.score = score;
+        this.difficulty = difficulty;
+        this.result = result;
         this.date = date;
     }
 
     // --- Getters ---
-
     public String getPlayerName() { return playerName; }
-    public int getScore() { return score; }
-    public String getDate() { return date; }
+    public int getScore()         { return score; }
+    public String getDifficulty() { return difficulty; }
+    public String getResult()     { return result; }
+    public String getDate()       { return date; }
 
-    /**
-     * המרה למחרוזת בפורמט CSV (מופרד בפסיקים) לשמירה בקובץ.
-     */
     @Override
     public String toString() {
-        return playerName + "," + score + "," + date;
+        // פורמט CSV מלא
+        return playerName + "," + score + "," +
+               difficulty + "," + result + "," + date;
     }
 }

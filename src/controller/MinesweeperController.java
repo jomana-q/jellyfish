@@ -165,16 +165,15 @@ public class MinesweeperController {
         // קודם מרעננים את התצוגה
         view.refreshView();
 
-        // תנאי סיום 1: אחד הלוחות גילה את כל המוקשים שלו
+        // תנאי סיום 1: אחד הלוחות גילה את כל המוקשים שלו → נחשב "Success"
         if (board1.allMinesRevealed() || board2.allMinesRevealed()) {
-            view.showGameOver();
+            view.showGameOver(true);   // success = true
             return;
         }
 
-        // תנאי סיום 2: אין יותר לבבות משותפים
+        // תנאי סיום 2: אין יותר לבבות משותפים → נחשב "Out of lives"
         if (session.isOutOfLives()) {
-        	saveGameResult();
-            view.showGameOver();
+            view.showGameOver(false);  // success = false
             return;
         }
 
@@ -182,6 +181,7 @@ public class MinesweeperController {
         player1Turn = !player1Turn;
         view.updateTurnHighlight();
     }
+
     
     /**
      * שמירת תוצאת המשחק להיסטוריה.
