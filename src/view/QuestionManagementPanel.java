@@ -199,6 +199,9 @@ public class QuestionManagementPanel extends JPanel {
     /**
      * מציג דיאלוג להוספה (rowToEdit=null) או עריכה (rowToEdit=מספר שורה).
      */
+    /**
+     * מציג דיאלוג להוספה (rowToEdit=null) או עריכה (rowToEdit=מספר שורה).
+     */
     private void showQuestionDialog(Integer rowToEdit) {
         JDialog dialog = new JDialog(parent, "עורך שאלות", true);
         dialog.setLayout(new GridLayout(9, 2, 10, 10));
@@ -235,8 +238,8 @@ public class QuestionManagementPanel extends JPanel {
             
             idField.setEditable(false); // בדרך כלל לא משנים ID בעריכה
         } else {
-            // יצירת ID אוטומטי במקרה של הוספה (לפי מספר השורות + 1)
-            idField.setText(String.valueOf(tableModel.getRowCount() + 1));
+            // --- שינוי: יצירת ID ייחודי (Max ID + 1) במקום לפי מספר שורות ---
+            idField.setText(getNextId());
         }
 
         // הוספת הרכיבים לדיאלוג
@@ -286,4 +289,27 @@ public class QuestionManagementPanel extends JPanel {
 
         dialog.setVisible(true);
     }
+
+    /**
+     * פונקציית עזר למציאת ה-ID הפנוי הבא (המקסימלי + 1).
+     * מונע כפילויות גם אם מחקנו שאלות באמצע.
+     */
+    private String getNextId() {
+        int maxId = 0;
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            try {
+                // קריאת ה-ID מעמודה 0 והמרה למספר
+                String idStr = (String) tableModel.getValueAt(i, 0);
+                int id = Integer.parseInt(idStr);
+                if (id > maxId) {
+                    maxId = id;
+                }
+            } catch (NumberFormatException e) {
+                // מתעלמים משורות עם ID לא תקין או ריק
+            }
+        }
+        return String.valueOf(maxId + 1);
+    }
+    
+    
 }
