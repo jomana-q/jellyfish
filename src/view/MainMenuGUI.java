@@ -174,8 +174,7 @@ public class MainMenuGUI extends JFrame {
 
         JButton historyBtn = createStyledButton("Game History");
         historyBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        // TODO: בהמשך – לפתוח HistoryPanel (נשאיר את זה לאחר כך)
-        panel.add(historyBtn);
+        historyBtn.addActionListener(e -> showHistoryPanel());        panel.add(historyBtn);
 
         panel.add(Box.createVerticalStrut(40));
 
@@ -200,7 +199,14 @@ public class MainMenuGUI extends JFrame {
         // מעבר למסך הזה
         centerLayout.show(centerContainer, "WIZARD");
     }
-
+    /**
+     * מעבר למסך היסטוריית המשחקים.
+     */
+    public void showHistoryPanel() {
+        HistoryPanel historyPanel = new HistoryPanel(this);
+        centerContainer.add(historyPanel, "HISTORY");
+        centerLayout.show(centerContainer, "HISTORY");
+    }
     // ---- ניהול מסכים ----
 
     /** חזרה למסך הראשי */
