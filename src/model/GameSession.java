@@ -333,5 +333,18 @@ public class GameSession {
             lives = maxLives;  // פשוט חותכים ל-10, בלי לתת נקודות
         }
     }
+    
+    /**
+     * סוף משחק: המרה של כל הלבבות שנותרו לנקודות.
+     * משתמשים ב-powerCost כ"מחיר" לב אחד.
+     * אחרי ההמרה, מספר הלבבות מתאפס ל-0.
+     */
+    public void convertRemainingLivesToScoreAtEnd() {
+        if (lives > 0) {
+            score += lives * difficulty.getPowerCost();
+            lives = 0;
+        }
+    }
+
 
 }
