@@ -39,4 +39,26 @@ public class GameTests {
         // אם הערכים שווים - הטסט עובר (ירוק). אם לא - נכשל (אדום).
         assertEquals("Initial lives for EASY should be 10", expected, actual);
     }
+    
+    /**
+     *Jumana:
+     * בדיקה של ניכוי ניקוד בעת הפעלת משבצת שאלה או הפתעה
+     * כאשר לשחקן יש בדיוק מספר נקודות מספיק.
+     */
+    @Test
+    public void testPayForPower_WhenScoreEqualsCost() {
+        session = new GameSession(Difficulty.MEDIUM);
+
+        int cost = session.getDifficulty().getPowerCost();
+        session.updateScore(cost);
+
+        assertTrue("canPayForPower() should be true when score == cost",
+                session.canPayForPower());
+
+        session.payForPower(); 
+
+        assertEquals("Score should be 0 after paying cost",
+                0, session.getScore());
+    }
+
 }
