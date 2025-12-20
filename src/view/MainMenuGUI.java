@@ -276,7 +276,7 @@ public class MainMenuGUI extends JFrame {
             }
         };
 
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20));
         btn.setForeground(Color.WHITE);
         btn.setContentAreaFilled(false); // ביטול הציור האוטומטי של ג'אווה (מונע ריבוע לבן)
         btn.setFocusPainted(false);
