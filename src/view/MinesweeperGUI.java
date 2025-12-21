@@ -484,12 +484,32 @@ public class MinesweeperGUI extends JPanel {
                     btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, btn.getFont().getSize()));
                 } else {
                     switch (cell.getType()) {
-                        case MINE -> {
-                            btn.setText("💣");
-                            btn.setBackground(new Color(150, 30, 30));
-                            btn.setForeground(Color.WHITE);
-                            btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, btn.getFont().getSize()));
+                    case MINE -> {
+                        btn.setText("💣");
+                        btn.setBackground(new Color(150, 30, 30));
+                        btn.setForeground(Color.WHITE);
+                        
+                        // 1. إزالة الهوامش والحدود نهائياً لزيادة المساحة
+                        btn.setMargin(new Insets(0, 0, 0, 0));
+                        btn.setBorderPainted(false); // هذا السطر ضروري جداً للـ Hard!
+                        btn.setIcon(null);
+
+                        int h = btn.getHeight();
+                        
+                        if (h > 0) {
+                            // في الـ Hard المربع بيكون صغير جداً، فبدنا الخط يكون نص حجم المربع تقريباً
+                            int newSize = (int)(h * 0.6); 
+                            
+                            // السماح للخط بأن يصغر حتى 8 بكسل (كان 10 سابقاً وهذا سبب المشكلة)
+                            if (newSize < 8) newSize = 8;
+                            
+                            btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, newSize));
+                        } else {
+                            btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 12));
                         }
+                    }
+                        
+                        
                         case NUMBER -> {
                             btn.setText(String.valueOf(cell.getAdjacentMines()));
                             btn.setBackground(new Color(200, 200, 230));
