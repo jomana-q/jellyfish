@@ -11,7 +11,7 @@ public class GameSession {
     public GameSession(Difficulty difficulty) {
         this.difficulty = difficulty;
         this.lives = difficulty.getInitialLives();  // מתחילים לפי רמת הקושי
-        this.maxLives = 10;                         // המקסימום תמיד 10 
+        this.maxLives = 10;                         // המקסימום תמיד 10
         this.score = 0;
     }
 
@@ -55,7 +55,6 @@ public class GameSession {
             lives = maxLives;
             score += extra * difficulty.getPowerCost(); // לב מעל המקסימום = מחיר תחנה
         }
-        // ירידה ל-0 או פחות תטופל ע"י ה-Controller כסיום משחק
     }
 
     /** החזרת true אם נגמרו החיים (תנאי סיום אחד) */
@@ -63,7 +62,7 @@ public class GameSession {
         return lives <= 0;
     }
 
-    // --- הפעלת שאלה/הפתעה – בסיס לאיטרציות הבאות ---
+    // --- הפעלת שאלה/הפתעה ---
 
     /** בדיקה האם יש מספיק נקודות לשלם על תחנה (שאלה/הפתעה) */
     public boolean canPayForPower() {
@@ -79,22 +78,29 @@ public class GameSession {
     }
 
     /**
-     * החלת אפקט כללי (שימושי במיוחד לשאלות לפי הטבלה):
-     * livesDelta – כמה לבבות לשנות (יכול להיות שלילי/חיובי)
-     * scoreDelta – כמה נקודות לשנות
-     */
-    public void applyEffect(int livesDelta, int scoreDelta) {
-        changeLives(livesDelta);
-        updateScore(scoreDelta);
-    }
-
-    /**
-     * הפעלת משבצת הפתעה לפי הטבלה של רמות קושי.
-     * good=true → הפתעה טובה, good=false → רעה.
+     * הפעלת משבצת הפתעה (הגרסה הישנה) – נשארת אם תרצי להשתמש בה,
+     * אבל עכשיו בבקר אנחנו עושים "שלב־שלב", אז לא נשתמש בה שם.
      */
     public void applySurprise(boolean good) {
         payForPower(); // קודם משלמים על ההפעלה
 
+        int pts = difficulty.getSurprisePoints();
+        if (good) {
+            changeLives(+1);
+            updateScore(+pts);
+        } else {
+            changeLives(-1);
+            updateScore(-pts);
+        }
+    }
+
+    /**
+     * ⭐ חדש: תוצאת הפתעה בלבד (בלי לשלם).
+     * נדרש כדי שב-Control נוכל:
+     * 1) payForPower() → refresh
+     * 2) applySurpriseOutcome() → refresh
+     */
+    public void applySurpriseOutcome(boolean good) {
         int pts = difficulty.getSurprisePoints();
         if (good) {
             changeLives(+1);
@@ -112,239 +118,105 @@ public class GameSession {
             return -3; // החטאה
         }
     }
+
     /**
-     * החלת תוצאות של שאלה לפי:
-     *  - רמת המשחק (this.difficulty)
-     *  - רמת השאלה (questionLevel)
-     *  - האם התשובה נכונה (correct)
-     *
-     * מימוש מדויק לפי הטבלה במסמך.
-     * בכל מקום שיש OR – נעשה הטלת מטבע 50%-50%.
-     *
-     * הפונקציה:
-     *  - מעדכנת ניקוד ולבבות.
-     *  - מחזירה QuestionBonusEffect כדי שה-Controller ידע האם
-     *    צריך לחשוף מוקש אוטומטית / להציג 3x3.
+     * החלת תוצאות של שאלה לפי הטבלה (כולל OR 50/50).
+     * שימי לב: כאן אין תשלום powerCost – התשלום יבוצע בבקר לפני השאלה
+     * כדי להציג שינוי ניקוד "בזמן אמת".
      */
     public QuestionBonusEffect applyQuestionResult(QuestionLevel questionLevel, boolean correct) {
         int livesDelta = 0;
         int scoreDelta = 0;
         QuestionBonusEffect bonus = QuestionBonusEffect.NONE;
 
-        boolean coinFlip = Math.random() < 0.5; // ל-OR 50%
+        boolean coinFlip = Math.random() < 0.5;
 
         switch (difficulty) {
             case EASY -> {
-                // רמת משחק: קל
                 switch (questionLevel) {
                     case EASY -> {
-                        if (correct) {
-                            // קל + שאלה קלה: (+3pts) & (+1❤)
-                            scoreDelta = +3;
-                            livesDelta = +1;
-                        } else {
-                            // קל + שאלה קלה: (-3pts) OR nothing
-                            if (coinFlip) {
-                                scoreDelta = -3;
-                            } else {
-                                scoreDelta = 0;
-                            }
-                        }
+                        if (correct) { scoreDelta = +3; livesDelta = +1; }
+                        else { scoreDelta = coinFlip ? -3 : 0; }
                     }
                     case MEDIUM -> {
-                        if (correct) {
-                            // קל + שאלה בינונית: חשיפת משבצת מוקש & (+6pts)
-                            scoreDelta = +6;
-                            livesDelta = 0;
-                            bonus = QuestionBonusEffect.REVEAL_MINE;
-                            // הערה: לא מקבלים נקודות על חשיפת המוקש עצמה
-                        } else {
-                            // קל + שאלה בינונית: (-6pts) OR nothing
-                            if (coinFlip) {
-                                scoreDelta = -6;
-                            } else {
-                                scoreDelta = 0;
-                            }
-                        }
+                        if (correct) { scoreDelta = +6; bonus = QuestionBonusEffect.REVEAL_MINE; }
+                        else { scoreDelta = coinFlip ? -6 : 0; }
                     }
                     case HARD -> {
-                        if (correct) {
-                            // קל + שאלה קשה: הצגת 3X3 משבצות & (+10pts)
-                            scoreDelta = +10;
-                            livesDelta = 0;
-                            bonus = QuestionBonusEffect.REVEAL_3X3;
-                        } else {
-                            // קל + שאלה קשה: (-10pts)
-                            scoreDelta = -10;
-                        }
+                        if (correct) { scoreDelta = +10; bonus = QuestionBonusEffect.REVEAL_3X3; }
+                        else { scoreDelta = -10; }
                     }
                     case EXPERT -> {
-                        if (correct) {
-                            // קל + שאלת מומחה: (+15pts) & (+2❤)
-                            scoreDelta = +15;
-                            livesDelta = +2;
-                        } else {
-                            // קל + שאלת מומחה: (-15pts) & (-1❤)
-                            scoreDelta = -15;
-                            livesDelta = -1;
-                        }
+                        if (correct) { scoreDelta = +15; livesDelta = +2; }
+                        else { scoreDelta = -15; livesDelta = -1; }
                     }
                 }
             }
 
             case MEDIUM -> {
-                // רמת משחק: בינוני
                 switch (questionLevel) {
                     case EASY -> {
-                        if (correct) {
-                            // בינוני + שאלה קלה: (+8pts) & (+1❤)
-                            scoreDelta = +8;
-                            livesDelta = +1;
-                        } else {
-                            // בינוני + שאלה קלה: (-8pts)
-                            scoreDelta = -8;
-                        }
+                        if (correct) { scoreDelta = +8; livesDelta = +1; }
+                        else { scoreDelta = -8; }
                     }
                     case MEDIUM -> {
-                        if (correct) {
-                            // בינוני + שאלה בינונית: (+10pts) & (+1❤)
-                            scoreDelta = +10;
-                            livesDelta = +1;
-                        } else {
-                            // בינוני + שאלה בינונית:
-                            // ((-10pts) & (-1❤)) OR nothing
-                            if (coinFlip) {
-                                scoreDelta = -10;
-                                livesDelta = -1;
-                            } else {
-                                scoreDelta = 0;
-                                livesDelta = 0;
-                            }
+                        if (correct) { scoreDelta = +10; livesDelta = +1; }
+                        else {
+                            if (coinFlip) { scoreDelta = -10; livesDelta = -1; }
+                            else { scoreDelta = 0; livesDelta = 0; }
                         }
                     }
                     case HARD -> {
-                        if (correct) {
-                            // בינוני + שאלה קשה: (+15pts) & (+1❤)
-                            scoreDelta = +15;
-                            livesDelta = +1;
-                        } else {
-                            // בינוני + שאלה קשה: (-15pts) & (-1❤)
-                            scoreDelta = -15;
-                            livesDelta = -1;
-                        }
+                        if (correct) { scoreDelta = +15; livesDelta = +1; }
+                        else { scoreDelta = -15; livesDelta = -1; }
                     }
                     case EXPERT -> {
-                        if (correct) {
-                            // בינוני + שאלת מומחה: (+20pts) & (+2❤)
-                            scoreDelta = +20;
-                            livesDelta = +2;
-                        } else {
-                            // בינוני + שאלת מומחה:
-                            // ((-20pts) & (-1❤)) OR ((-20pts) & (-2❤))
-                            scoreDelta = -20;
-                            if (coinFlip) {
-                                livesDelta = -1;
-                            } else {
-                                livesDelta = -2;
-                            }
-                        }
+                        if (correct) { scoreDelta = +20; livesDelta = +2; }
+                        else { scoreDelta = -20; livesDelta = coinFlip ? -1 : -2; }
                     }
                 }
             }
 
             case HARD -> {
-                // רמת משחק: קשה
                 switch (questionLevel) {
                     case EASY -> {
-                        if (correct) {
-                            // קשה + שאלה קלה: (+10pts) & (+1❤)
-                            scoreDelta = +10;
-                            livesDelta = +1;
-                        } else {
-                            // קשה + שאלה קלה: (-10pts) & (-1❤)
-                            scoreDelta = -10;
-                            livesDelta = -1;
-                        }
+                        if (correct) { scoreDelta = +10; livesDelta = +1; }
+                        else { scoreDelta = -10; livesDelta = -1; }
                     }
                     case MEDIUM -> {
-                        if (correct) {
-                            // קשה + שאלה בינונית:
-                            // ((+15pts) & (+1❤)) OR ((+15pts) & (+2❤))
-                            scoreDelta = +15;
-                            if (coinFlip) {
-                                livesDelta = +1;
-                            } else {
-                                livesDelta = +2;
-                            }
-                        } else {
-                            // קשה + שאלה בינונית:
-                            // ((-15pts) & (-1❤)) OR ((-15pts) & (-2❤))
-                            scoreDelta = -15;
-                            if (coinFlip) {
-                                livesDelta = -1;
-                            } else {
-                                livesDelta = -2;
-                            }
-                        }
+                        if (correct) { scoreDelta = +15; livesDelta = coinFlip ? +1 : +2; }
+                        else { scoreDelta = -15; livesDelta = coinFlip ? -1 : -2; }
                     }
                     case HARD -> {
-                        if (correct) {
-                            // קשה + שאלה קשה: (+20pts) & (+2❤)
-                            scoreDelta = +20;
-                            livesDelta = +2;
-                        } else {
-                            // קשה + שאלה קשה: (-20pts) & (-2❤)
-                            scoreDelta = -20;
-                            livesDelta = -2;
-                        }
+                        if (correct) { scoreDelta = +20; livesDelta = +2; }
+                        else { scoreDelta = -20; livesDelta = -2; }
                     }
                     case EXPERT -> {
-                        if (correct) {
-                            // קשה + שאלת מומחה: (+40pts) & (+3❤)
-                            scoreDelta = +40;
-                            livesDelta = +3;
-                        } else {
-                            // קשה + שאלת מומחה: (-40pts) & (-3❤)
-                            scoreDelta = -40;
-                            livesDelta = -3;
-                        }
+                        if (correct) { scoreDelta = +40; livesDelta = +3; }
+                        else { scoreDelta = -40; livesDelta = -3; }
                     }
                 }
             }
         }
 
-     // קודם מעדכנים ניקוד לפי הטבלה
         updateScore(scoreDelta);
-
-        // אחר כך מעדכנים חיים *בלי* להמיר לב עודף לנקודות
         changeLivesNoOverflowScore(livesDelta);
-
         return bonus;
-
     }
-    
-    /**
-     * שינוי לבבות *בלי* להמיר לבבות עודפים לנקודות.
-     * משמש במיוחד לתוצאות של שאלות, כדי לכבד את הטבלה בדיוק.
-     */
+
+    /** שינוי לבבות בלי המרה לנקודות (לשאלות לפי הטבלה) */
     private void changeLivesNoOverflowScore(int delta) {
         lives += delta;
         if (lives > maxLives) {
-            lives = maxLives;  // פשוט חותכים ל-10, בלי לתת נקודות
+            lives = maxLives;
         }
     }
-    
-    /**
-     * סוף משחק: המרה של כל הלבבות שנותרו לנקודות.
-     * משתמשים ב-powerCost כ"מחיר" לב אחד.
-     * אחרי ההמרה, מספר הלבבות מתאפס ל-0.
-     */
+
+    /** סוף משחק: המרת לבבות לנקודות */
     public void convertRemainingLivesToScoreAtEnd() {
         if (lives > 0) {
             score += lives * difficulty.getPowerCost();
             lives = 0;
         }
     }
-
-
 }

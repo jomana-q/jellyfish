@@ -3,15 +3,16 @@ package view;
 import model.GameHistory;
 import model.GameHistoryEntry;
 
+
+
+import model.GameHistory;
+import model.GameHistoryEntry;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 
-/**
- * מסך היסטוריית משחקים (Leaderboard / History).
- * מציג טבלה עם השחקנים, הניקוד והתאריך.
- */
 public class HistoryPanel extends JPanel {
 
     private final MainMenuGUI parent;
@@ -29,21 +30,16 @@ public class HistoryPanel extends JPanel {
         setLayout(new BorderLayout(20, 20));
         setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
-        // --- כותרת ---
         JLabel titleLabel = new JLabel("Game History & Top Scores", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titleLabel.setForeground(Color.WHITE);
         add(titleLabel, BorderLayout.NORTH);
 
-        // --- טבלה ---
-        String[] columnNames = {"Player Name", "Score", "Difficulty", "Result", "Date"};
-        
-        // מודל שלא ניתן לעריכה
+        String[] columnNames = {"Player Name", "Score", "Difficulty", "Result", "Duration (sec)", "Date"};
+
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
+            public boolean isCellEditable(int row, int column) { return false; }
         };
 
         table = new JTable(tableModel);
@@ -51,32 +47,23 @@ public class HistoryPanel extends JPanel {
         table.setRowHeight(30);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 16));
-        
-        // עיצוב הטבלה (רקע שקוף למחצה לשיפור קריאות)
         table.setBackground(new Color(255, 255, 255, 240));
 
         JScrollPane scrollPane = new JScrollPane(table);
-        // רקע שקוף למסגרת הגלילה
         scrollPane.getViewport().setBackground(new Color(255, 255, 255, 200));
-        
         add(scrollPane, BorderLayout.CENTER);
 
-        // --- כפתור חזרה למטה ---
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         bottomPanel.setOpaque(false);
 
         JButton backBtn = new JButton("Back to Admin Dashboard");
         styleButton(backBtn);
-        
         backBtn.addActionListener(e -> parent.showAdminDashboard());
-        
+
         bottomPanel.add(backBtn);
         add(bottomPanel, BorderLayout.SOUTH);
     }
 
-    /**
-     * טעינת הנתונים מה-Model (GameHistory) לטבלה.
-     */
     private void loadHistoryData() {
         GameHistory historyHandler = new GameHistory();
         List<GameHistoryEntry> entries = historyHandler.getTopScores();
@@ -85,16 +72,16 @@ public class HistoryPanel extends JPanel {
 
         for (GameHistoryEntry entry : entries) {
             Object[] rowData = {
-                entry.getPlayerName(),
-                entry.getScore(),
-                entry.getDifficulty(),
-                entry.getResult(),
-                entry.getDate()
+                    entry.getPlayerName(),
+                    entry.getScore(),
+                    entry.getDifficulty(),
+                    entry.getResult(),
+                    entry.getDurationSeconds(),
+                    entry.getDate()
             };
             tableModel.addRow(rowData);
         }
     }
-
 
     private void styleButton(JButton btn) {
         btn.setFont(new Font("Segoe UI", Font.BOLD, 16));

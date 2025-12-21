@@ -1,5 +1,25 @@
 ID,Question,Difficulty,A,B,C,D,Correct Answer
-1, Which diagram describes system structure?,1, Class Diagram, Sequence Diagram ,State Diagram,Use-Case Flow,A
-2, What does UML stand for?,1, Unified Modeling Language , User Machine Link, Universal Model Layout,Unmodified Mapping Logic,A
-3, In MVC which component handles user actions?,1, Model ,View ,Controller,Database,C
-4,What is the main purpose of Requirements Analysis?,1,To write code, To understand what the customer needs ,To design test cases,To evaluate staff performance,B
+1,Which diagram describes system structure?,1,Class Diagram,Sequence Diagram,State Diagram,Use-Case Flow,A
+2,What does UML stand for?,1,Unified Modeling Language,User Machine Link,Universal Model Layout,Unmodified Mapping Logic,A
+3,In MVC which component handles user actions?,1,Model,View,Controller,Database,C
+4,What is the main purpose of Requirements Analysis?,1,To write code,To understand what the customer needs,To design test cases,To evaluate staff performance,B
+6,Which diagram shows how users interact with the system?,1,Class Diagram,Use Case Diagram,Sequence Diagram,State Diagram,B
+7,In MVC which component handles user input?,2,Model,View,Controller,Database,C
+8,What is the main goal of requirements analysis?,2,Write source code,Understand customer needs,Design UI screens,Run test cases,B
+9,Which testing level focuses on interactions between modules?,2,Unit Testing,Integration Testing,System Testing,Acceptance Testing,B
+10,What is black-box testing based on?,2,Source code structure,Internal logic,System requirements and behavior,CPU architecture,C
+11,Which UML diagram represents object interactions over time?,2,Class Diagram,Deployment Diagram,Component Diagram,Sequence Diagram,D
+12,What is the purpose of a software review?,2,Find defects early,Replace testing,Generate code automatically,Improve hardware performance,A
+13,What is cyclomatic complexity used for?,3,Counting requirements,Calculating memory usage,Measuring UI quality,Estimating number of test paths,D
+14,Which testing technique focuses on input boundaries?,3,Boundary Value Analysis,Regression Testing,Statement Coverage,Equivalence Partitioning,A
+15,What is the main purpose of integration testing?,3,Check UI colors,Measure execution time,Ensure components work together,Test individual methods,C
+16,Which architecture style emphasizes separation into layers?,3,Microservices,Layered Architecture,Peer-to-Peer,Event-Driven,B
+17,What does regression testing ensure?,3,UI is responsive,New features work,Old functionality still works after changes,Database is normalized,C
+18,Which document links requirements to test cases?,3,Traceability Matrix,Deployment Diagram,User Manual,Source Code,A
+19,What is the main difference between verification and validation?,4,They are identical,Verification checks correctnes ; validation checks customer needs,Validation comes before requirements,Verification is done only by users,B
+20,Which coverage criterion requires all branches to be executed?,4,UI Coverage,Path Coverage,Statement Coverage,Branch Coverage,D
+21,What is refactoring?,4,Improving internal code without changing behavior,Adding new features,Fixing requirements errors,Optimizing hardware,A
+22,In an inspection review who leads the process?,4,Moderator,Developer,Customer,Tester,A
+23,Which testing technique reduces test cases by grouping similar inputs?,4,Boundary Value Analysis,Equivalence Partitioning,Regression Testing,Stress Testing,B
+24,What is a key risk of skipping software reviews?,4,Lower development cost,Faster testing cycles,More defects reaching later stages,Better documentation,C
+25,"What is ""Black Box"" testing based on?",1,The internal code structure,The system's specifications,The programming language,The database design,B

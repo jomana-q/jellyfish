@@ -5,103 +5,103 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/**
- * מחלקה המנהלת את טבלת השיאים (High Scores).
- * אחראית על שמירה וטעינה של הנתונים לקובץ 'history.csv'.
- */
 public class GameHistory {
 
-	private List<GameHistoryEntry> entries;
-	// שם הקובץ שבו יישמרו התוצאות (נוצר אוטומטית בתיקיית הפרויקט)
-	private static final String HISTORY_FILE = "history.csv";
+    private List<GameHistoryEntry> entries;
+    private static final String HISTORY_FILE = "history.csv";
 
-	public GameHistory() {
-		this.entries = new ArrayList<>();
-		loadHistory(); // טעינת היסטוריה ברגע שהמשחק עולה
-	}
+    public GameHistory() {
+        this.entries = new ArrayList<>();
+        loadHistory();
+    }
 
-	/**
-	 * הוספת תוצאה חדשה ושמירה מיידית לקובץ.
-	 */
-	public void addEntry(String name, int score,
-			String difficulty, String result) {
-		entries.add(new GameHistoryEntry(name, score, difficulty, result));
-		saveHistory();
-	}
+    // חדש: כולל durationSeconds
+    public void addEntry(String name, int score, String difficulty, String result, int durationSeconds) {
+        entries.add(new GameHistoryEntry(name, score, difficulty, result, durationSeconds));
+        saveHistory();
+    }
 
-	//לשמירה לאחור – אם תקודמים עדיין קוראים addEntry(name, score)
-	public void addEntry(String name, int score) {
-		addEntry(name, score, "", "");
-	}
+    // ישן (לתאימות)
+    public void addEntry(String name, int score, String difficulty, String result) {
+        addEntry(name, score, difficulty, result, 0);
+    }
 
+    public void addEntry(String name, int score) {
+        addEntry(name, score, "", "", 0);
+    }
 
-	/**
-	 * החזרת 10 התוצאות הטובות ביותר (ממוין מהגבוה לנמוך).
-	 */
-	public List<GameHistoryEntry> getTopScores() {
-		// מיון הרשימה לפי הניקוד (בסדר יורד)
-		entries.sort(Comparator.comparingInt(GameHistoryEntry::getScore).reversed());
+    public List<GameHistoryEntry> getTopScores() {
+        entries.sort(Comparator.comparingInt(GameHistoryEntry::getScore).reversed());
+        if (entries.size() > 10) return entries.subList(0, 10);
+        return entries;
+    }
 
-		// החזרת 10 הראשונים בלבד (או פחות אם אין מספיק)
-		if (entries.size() > 10) {
-			return entries.subList(0, 10);
-		}
-		return entries;
-	}
+    private void saveHistory() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(HISTORY_FILE))) {
 
-	/**
-	 * שמירת כל הרשימה לקובץ CSV.
-	 * אם הקובץ לא קיים, הפונקציה תיצור אותו.
-	 */
-	private void saveHistory() {
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(HISTORY_FILE))) {
-			for (GameHistoryEntry entry : entries) {
-				writer.write(entry.toString()); // כתיבת השורה (שם,ניקוד,תאריך)
-				writer.newLine(); // ירידת שורה
-			}
-		} catch (IOException e) {
-			System.err.println("שגיאה בשמירת ההיסטוריה: " + e.getMessage());
-		}
-	}
+            // ⭐ כותרת עמודות
+            writer.write("Players Name,Score,Game Difficulty,Result,Duration (sec),Date");
+            writer.newLine();
+
+            for (GameHistoryEntry entry : entries) {
+                writer.write(entry.toString());
+                writer.newLine();
+            }
+
+        } catch (IOException e) {
+            System.err.println("Error saving history: " + e.getMessage());
+        }
+    }
 
 
-	/**
-	 * טעינת הנתונים מהקובץ לרשימה בזיכרון.
-	 */
-	private void loadHistory() {
-		File file = new File(HISTORY_FILE);
-		if (!file.exists()) return;
+    private void loadHistory() {
+        File file = new File(HISTORY_FILE);
+        if (!file.exists()) return;
 
-		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-			String line;
-			while ((line = reader.readLine()) != null) {
-				String[] parts = line.split(",");
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
 
-				try {
-					if (parts.length == 3) {
-						// פורמט ישן: name,score,date
-						String name = parts[0];
-						int score = Integer.parseInt(parts[1]);
-						String date = parts[2];
-						entries.add(new GameHistoryEntry(name, score,
-								"", "", date));
-					} else if (parts.length >= 5) {
-						// פורמט חדש: name,score,difficulty,result,date
-						String name = parts[0];
-						int score = Integer.parseInt(parts[1]);
-						String difficulty = parts[2];
-						String result = parts[3];
-						String date = parts[4];
-						entries.add(new GameHistoryEntry(name, score,
-								difficulty, result, date));
-					}
-				} catch (NumberFormatException e) {
-					System.err.println("שגיאה בטעינת רשומה: " + line);
-				}
-			}
-		} catch (IOException e) {
-			System.err.println("שגיאה בטעינת ההיסטוריה: " + e.getMessage());
-		}
-	}
+            // ⭐ דילוג על שורת הכותרת
+            reader.readLine();
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+
+                try {
+                    if (parts.length == 3) {
+                        // ישן: name,score,date
+                        String name = parts[0];
+                        int score = Integer.parseInt(parts[1]);
+                        String date = parts[2];
+                        entries.add(new GameHistoryEntry(name, score, "", "", 0, date));
+
+                    } else if (parts.length == 5) {
+                        // חדש-ישן: name,score,difficulty,result,date
+                        String name = parts[0];
+                        int score = Integer.parseInt(parts[1]);
+                        String difficulty = parts[2];
+                        String result = parts[3];
+                        String date = parts[4];
+                        entries.add(new GameHistoryEntry(name, score, difficulty, result, 0, date));
+
+                    } else if (parts.length >= 6) {
+                        // חדש: name,score,difficulty,result,durationSeconds,date
+                        String name = parts[0];
+                        int score = Integer.parseInt(parts[1]);
+                        String difficulty = parts[2];
+                        String result = parts[3];
+                        int duration = Integer.parseInt(parts[4]);
+                        String date = parts[5];
+                        entries.add(new GameHistoryEntry(name, score, difficulty, result, duration, date));
+                    }
+
+                } catch (NumberFormatException e) {
+                    System.err.println("שגיאה בטעינת רשומה: " + line);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("שגיאה בטעינת ההיסטוריה: " + e.getMessage());
+        }
+    }
 
 }
