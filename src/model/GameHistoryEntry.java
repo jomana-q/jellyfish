@@ -3,52 +3,47 @@ package model;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/**
- * מחלקה המייצגת רשומה אחת בהיסטוריית המשחקים.
- * שומרת את שם השחקן, הניקוד והתאריך שבו המשחק הסתיים.
- */
 public class GameHistoryEntry {
 
     private String playerName;
     private int score;
-    private String difficulty; // NEW
-    private String result;     // NEW
+    private String difficulty;
+    private String result;
+    private int durationSeconds;
     private String date;
 
-    // בנאי חדש למשחק חדש שנשמר עכשיו
-    public GameHistoryEntry(String playerName, int score,
-                            String difficulty, String result) {
+    // חדש: נשמר עכשיו
+    public GameHistoryEntry(String playerName, int score, String difficulty, String result, int durationSeconds) {
         this.playerName = playerName;
         this.score = score;
         this.difficulty = difficulty;
         this.result = result;
+        this.durationSeconds = durationSeconds;
 
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
         this.date = dtf.format(LocalDateTime.now());
     }
 
-    // בנאי לטעינה מקובץ (עם כל השדות)
-    public GameHistoryEntry(String playerName, int score,
-                            String difficulty, String result,
-                            String date) {
+    // טעינה מקובץ
+    public GameHistoryEntry(String playerName, int score, String difficulty, String result, int durationSeconds, String date) {
         this.playerName = playerName;
         this.score = score;
         this.difficulty = difficulty;
         this.result = result;
+        this.durationSeconds = durationSeconds;
         this.date = date;
     }
 
-    // --- Getters ---
     public String getPlayerName() { return playerName; }
-    public int getScore()         { return score; }
+    public int getScore() { return score; }
     public String getDifficulty() { return difficulty; }
-    public String getResult()     { return result; }
-    public String getDate()       { return date; }
+    public String getResult() { return result; }
+    public String getDate() { return date; }
+    public int getDurationSeconds() { return durationSeconds; }
 
     @Override
     public String toString() {
-        // פורמט CSV מלא
-        return playerName + "," + score + "," +
-               difficulty + "," + result + "," + date;
+        // פורמט חדש: name,score,difficulty,result,durationSeconds,date
+        return playerName + "," + score + "," + difficulty + "," + result + "," + durationSeconds + "," + date;
     }
 }

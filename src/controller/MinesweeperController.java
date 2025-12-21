@@ -1,24 +1,9 @@
 package controller;
 
-import model.Board;
-import model.Cell;
-import model.CellType;
-import model.GameSession;
-import model.Question;
-import model.QuestionBank;
-import model.QuestionBonusEffect;
+import model.*;
 import view.MinesweeperGUI;
 import view.QuestionDialog;
 
-import javax.swing.*;
-
-/**
- * בקר המשחק – אחראי על:
- *  - טיפול בלחיצות (שמאל/ימין) על הלוחות
- *  - מעבר תורות
- *  - בדיקת תנאי סיום
- *  - קריאה ל-View לעדכן תצוגה / להציג Game Over
- */
 public class MinesweeperController {
 
     private final Board board1;
@@ -26,8 +11,17 @@ public class MinesweeperController {
     private final GameSession session;
     private final MinesweeperGUI view;
 
-    /** true = תור שחקן 1 (לוח ראשון), false = שחקן 2 (לוח שני) */
     private boolean player1Turn = true;
+
+    private static final int OVERLAY_SECONDS = 5;
+
+    // =========================
+    // Timer / Pause fields
+    // =========================
+    private boolean paused = false;
+    private long gameStartMillis = 0L;
+    private long pausedAtMillis = 0L;
+    private long totalPausedMillis = 0L;
 
     public MinesweeperController(Board board1,
                                  Board board2,
@@ -44,158 +38,198 @@ public class MinesweeperController {
     public GameSession getSession() { return session; }
     public boolean isPlayer1Turn() { return player1Turn; }
 
-    /**
-     * לחיצה שמאלית – פתיחת תא / הפעלת שאלה / הפתעה.
-     */
+    // =========================
+    // Timer API
+    // =========================
+    public void startGameTimer() {
+        gameStartMillis = System.currentTimeMillis();
+        paused = false;
+        pausedAtMillis = 0L;
+        totalPausedMillis = 0L;
+    }
+
+    public void togglePause() {
+        if (gameStartMillis == 0L) return; // timer not started yet
+
+        long now = System.currentTimeMillis();
+        if (!paused) {
+            paused = true;
+            pausedAtMillis = now;
+        } else {
+            paused = false;
+            totalPausedMillis += (now - pausedAtMillis);
+            pausedAtMillis = 0L;
+        }
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    /** elapsed time EXCLUDING pauses */
+    public long getElapsedActiveMillis() {
+        if (gameStartMillis == 0L) return 0L;
+
+        long now = paused ? pausedAtMillis : System.currentTimeMillis();
+        long elapsed = (now - gameStartMillis) - totalPausedMillis;
+        return Math.max(0L, elapsed);
+    }
+
+    // =========================
+    // Click handling
+    // =========================
     public void handleLeftClick(boolean firstBoard, int row, int col) {
+        if (paused) return;
+
         Board board = firstBoard ? board1 : board2;
         Cell cell = board.getCell(row, col);
 
-        // אם התא כבר נחשף **ואי אפשר** להפעיל בו שאלה/הפתעה -> מתעלמים מהלחיצה
-        if (cell.isRevealed() && !board.canActivateSpecial(row, col)) {
-            return; // לא עושים כלום, לא עובר תור
-        }
+        if (cell.isRevealed() && !board.canActivateSpecial(row, col)) return;
 
-        // אם זה תא מיוחד שניתן להפעיל (שאלה/הפתעה אחרי שנפתח)
         if (board.canActivateSpecial(row, col)) {
-            // --- הקוד שהיה לך קודם נשאר אותו דבר מכאן והלאה ---
-            if (cell.getType() == CellType.SURPRISE) {
-                boolean good = Math.random() < 0.5;
-                session.applySurprise(good);
-                board.markSpecialUsed(row, col);
 
-            } else if (cell.getType() == CellType.QUESTION) {
-                Question q = QuestionBank.getInstance().getRandomQuestion();
-
-                if (q == null) {
-                    JOptionPane.showMessageDialog(
-                            view,
-                            "לא נטענו שאלות מהקובץ.\nבדקי שקובץ questions.csv נמצא בתיקייה הראשית.",
-                            "שגיאת שאלות",
-                            JOptionPane.ERROR_MESSAGE
-                    );
-                } else {
-                    int beforeScore = session.getScore();
-                    int beforeLives = session.getLives();
-
-                    boolean correct = QuestionDialog.showQuestionDialog(view, q);
-
-                    QuestionBonusEffect bonus = session.applyQuestionResult(q.getLevel(), correct);
-
-                    if (bonus == QuestionBonusEffect.REVEAL_MINE) {
-                        board.revealRandomMine();
-                    }
-
-                    if (bonus == QuestionBonusEffect.REVEAL_3X3) {
-                        board.revealRandom3x3(session);
-                    }
-
-                    view.refreshView();
-
-                    int afterScore = session.getScore();
-                    int afterLives = session.getLives();
-
-                    int deltaScore = afterScore - beforeScore;
-                    int deltaLives = afterLives - beforeLives;
-
-                    StringBuilder msg = new StringBuilder();
-                    msg.append(correct ? "תשובה נכונה! 🎉" : "תשובה שגויה. 😕");
-
-                    if (deltaScore != 0) {
-                        msg.append("\nניקוד: ");
-                        msg.append(deltaScore > 0 ? "+" : "");
-                        msg.append(deltaScore);
-                    }
-                    if (deltaLives != 0) {
-                        msg.append("\nחיים: ");
-                        msg.append(deltaLives > 0 ? "+" : "");
-                        msg.append(deltaLives);
-                    }
-
-                    JOptionPane.showMessageDialog(
-                            view,
-                            msg.toString(),
-                            "תוצאה",
-                            JOptionPane.INFORMATION_MESSAGE
-                    );
-                }
-
-                // אחרי ההפעלה – אי אפשר להשתמש בתא שוב
-                board.markSpecialUsed(row, col);
+            if (!session.canPayForPower()) {
+                view.showTemporaryOverlay(
+                        "NOT ENOUGH SCORE\nActivation cost: -" + session.getDifficulty().getPowerCost() + " pts",
+                        OVERLAY_SECONDS
+                );
+                view.refreshView();
+                return;
             }
 
-        } else {
-            // תא עדיין לא נחשף – פתיחה רגילה
-            board.openCell(row, col, session);
+            if (cell.getType() == CellType.QUESTION) {
+                Question test = QuestionBank.getInstance().getRandomQuestion();
+                if (test == null) {
+                    view.showTemporaryOverlay(
+                            "NO QUESTIONS LOADED\nMake sure questions.csv exists",
+                            OVERLAY_SECONDS
+                    );
+                    view.refreshView();
+                    return;
+                }
+            }
+
+            int scoreBeforeAll = session.getScore();
+            int livesBeforeAll = session.getLives();
+
+            int cost = session.getDifficulty().getPowerCost();
+
+            session.payForPower();
+            int scoreAfterPay = session.getScore();
+            int livesAfterPay = session.getLives();
+
+            String overlayMsg;
+
+            if (cell.getType() == CellType.SURPRISE) {
+                boolean good = Math.random() < 0.5;
+
+                session.applySurpriseOutcome(good);
+                board.markSpecialUsed(row, col);
+
+                int outcomeScore = session.getScore() - scoreAfterPay;
+                int outcomeLives = session.getLives() - livesAfterPay;
+                int totalScoreDelta = session.getScore() - scoreBeforeAll;
+                int totalLivesDelta = session.getLives() - livesBeforeAll;
+
+                overlayMsg =
+                        (good ? "GOOD SURPRISE!" : "BAD SURPRISE!") +
+                        "\nActivation Surprise cost: -" + cost + " pts" +
+                        "\nSurprise effect: " + signed(outcomeScore) + " pts, Lives " + signed(outcomeLives) +
+                        "\nTotal score change: " + signed(totalScoreDelta) +
+                        "\nTotal lives change: " + signed(totalLivesDelta);
+
+            } else if (cell.getType() == CellType.QUESTION) {
+
+                Question q = QuestionBank.getInstance().getRandomQuestion();
+                boolean correct = QuestionDialog.showQuestionDialog(view, q);
+
+                QuestionBonusEffect bonus = session.applyQuestionResult(q.getLevel(), correct);
+
+                if (bonus == QuestionBonusEffect.REVEAL_MINE) {
+                    board.revealRandomMine();
+                } else if (bonus == QuestionBonusEffect.REVEAL_3X3) {
+                    board.revealRandom3x3(session);
+                }
+
+                board.markSpecialUsed(row, col);
+
+                int outcomeScore = session.getScore() - scoreAfterPay;
+                int outcomeLives = session.getLives() - livesAfterPay;
+                int totalScoreDelta = session.getScore() - scoreBeforeAll;
+                int totalLivesDelta = session.getLives() - livesBeforeAll;
+
+                overlayMsg =
+                        (correct ? "CORRECT ANSWER!" : "WRONG ANSWER!") +
+                        "\nActivation Question cost: -" + cost + " pts" +
+                        "\nAnswer effect: " + signed(outcomeScore) + " pts, Lives " + signed(outcomeLives) +
+                        "\nTotal score change: " + signed(totalScoreDelta) +
+                        "\nTotal lives change: " + signed(totalLivesDelta);
+
+                if (bonus != QuestionBonusEffect.NONE) {
+                    overlayMsg += "\nBONUS: " + bonus;
+                }
+
+            } else {
+                overlayMsg = "CANNOT ACTIVATE THIS CELL";
+            }
+
+            view.refreshView();
+            view.showTemporaryOverlay(overlayMsg, OVERLAY_SECONDS);
+            endTurn();
+            return;
         }
 
+        board.openCell(row, col, session);
         endTurn();
     }
 
-
-
-    /**
-     * לחיצה ימנית – סימון/ביטול דגל.
-     */
     public void handleRightClick(boolean firstBoard, int row, int col) {
+        if (paused) return;
+
         Board board = firstBoard ? board1 : board2;
         Cell cell = board.getCell(row, col);
 
-        // אם התא כבר נחשף – אין דגלים עליו
-        if (cell.isRevealed()) {
-            return;
-        }
+        if (cell.isRevealed()) return;
+        if (cell.isPowerUsed()) return;
 
-        // אם זו משבצת מיוחדת שכבר הופעלה (USED) – לא מסמנים עליה דגל
-        if (cell.isPowerUsed()) {
-            return;
-        }
+        int scoreBefore = session.getScore();
+        int livesBefore = session.getLives();
 
-        // כאן באמת מסמנים / מבטלים דגל + מעדכנים ניקוד לפי הטבלה
         board.toggleFlag(row, col, session);
 
-        // רענון מסך + מעבר תור
+        int totalScoreDelta = session.getScore() - scoreBefore;
+        int totalLivesDelta = session.getLives() - livesBefore;
+
+        view.refreshView();
+        view.showTemporaryOverlay(
+                "FLAG TOGGLED" +
+                        "\nTotal score change: " + signed(totalScoreDelta) +
+                        "\nTotal lives change: " + signed(totalLivesDelta),
+                OVERLAY_SECONDS
+        );
+
         endTurn();
     }
 
-    /**
-     * סיום תור – רענון מסך, בדיקת תנאי סיום, החלפת שחקן.
-     */
     private void endTurn() {
-        // קודם מרעננים את התצוגה
         view.refreshView();
 
-        // תנאי סיום 1: אחד הלוחות גילה את כל המוקשים שלו → נחשב "Success"
         if (board1.allMinesRevealed() || board2.allMinesRevealed()) {
-            view.showGameOver(true);   // success = true
+            view.showGameOver(true);
             return;
         }
 
-        // תנאי סיום 2: אין יותר לבבות משותפים → נחשב "Out of lives"
         if (session.isOutOfLives()) {
-            view.showGameOver(false);  // success = false
+            view.showGameOver(false);
             return;
         }
 
-        // אם המשחק לא הסתיים – מחליפים תור
         player1Turn = !player1Turn;
         view.updateTurnHighlight();
     }
 
-    
-    /**
-     * שמירת תוצאת המשחק להיסטוריה.
-     */
-    private void saveGameResult() {
-        // 1. יצירת אובייקט היסטוריה
-        model.GameHistory history = new model.GameHistory();
-        
-        // 2. חיבור שמות השחקנים למחרוזת אחת (כי ה-Entry מקבל שם אחד)
-        String combinedNames = view.getPlayer1Name() + " & " + view.getPlayer2Name();
-        
-        // 3. שמירה (הוספת שורה לקובץ ה-CSV)
-        history.addEntry(combinedNames, session.getScore());
-        
-        System.out.println("Game saved to history: " + combinedNames + " - " + session.getScore());
+    private String signed(int x) {
+        if (x > 0) return "+" + x;
+        return String.valueOf(x);
     }
 }

@@ -1,6 +1,7 @@
 package controller;
 
 import javax.swing.SwingUtilities;
+
 import view.MainMenuGUI;
 
 public class Main {
