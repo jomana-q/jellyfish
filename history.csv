@@ -1,4 +1,4 @@
-Player Name,Score,Game Difficulty,Result,Duration (sec),Date
+Players Name,Score,Game Difficulty,Result,Duration (sec),Date
 adam & ameer,187,,,0,2025/12/08 14:15
 Soso & Lolo,202,EASY,All mines revealed,0,2025/12/08 14:32
 Tom & George,186,EASY,All mines revealed,0,2025/12/08 15:39
@@ -10,3 +10,4 @@ a & z,198,HARD,Out of lives,0,2025/12/08 15:51
 fg & df,129,EASY,Out of lives,0,2025/12/16 11:56
 jhg & ytr,132,EASY,Out of lives,31,2025/12/20 21:43
 fds & fds,123,EASY,Out of lives,24,2025/12/20 22:42
+sdf & dfg,126,EASY,Out of lives,37,2025/12/21 10:19

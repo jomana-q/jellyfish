@@ -60,5 +60,31 @@ public class GameTests {
         assertEquals("Score should be 0 after paying cost",
                 0, session.getScore());
     }
+    /**
+     * Sara:
+     * Test that remaining lives are converted to score at the end of the game
+     * and lives are reset to zero.
+     */
+    @Test
+    public void testConvertRemainingLivesToScoreAtEnd() {
+        session = new GameSession(Difficulty.EASY);
+
+        int initialLives = session.getLives(); // EASY -> 10
+        int powerCost = session.getDifficulty().getPowerCost(); // EASY -> 5
+
+        // Expected score after conversion
+        int expectedScore = initialLives * powerCost;
+
+        // פעולה
+        session.convertRemainingLivesToScoreAtEnd();
+
+        // בדיקות
+        assertEquals("All remaining lives should be converted to score",
+                expectedScore, session.getScore());
+
+        assertEquals("Lives should be zero after conversion",
+                0, session.getLives());
+    }
+
 
 }
