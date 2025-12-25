@@ -23,7 +23,8 @@ public class MainMenuGUI extends JFrame {
     private MinesweeperGUI gamePanel;       // מסך המשחק (שני לוחות)
     private AdminLoginPanel adminLoginPanel; // מסך התחברות אדמין
     private JPanel adminDashboardPanel;      // מסך דשבורד אדמין
-   
+    private SettingsPanel settingsPanel;
+    
     public MainMenuGUI() {
         // 1. הגדרות חלון (מותאם למחשב PC)
         setTitle("Minesweeper - Jellyfish Team");
@@ -315,8 +316,13 @@ public class MainMenuGUI extends JFrame {
 
     // --- Placeholder Navigation ---
 
+    /** פתיחת מסך ההגדרות (Settings) */
     private void openSettingsPage() {
-        JOptionPane.showMessageDialog(this, "Settings Page");
+        if (settingsPanel == null) {
+            settingsPanel = new SettingsPanel(this);
+            centerContainer.add(settingsPanel, "SETTINGS");
+        }
+        centerLayout.show(centerContainer, "SETTINGS");
     }
 
     private void openAdminDashboard() {
