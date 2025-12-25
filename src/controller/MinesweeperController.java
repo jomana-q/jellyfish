@@ -15,9 +15,7 @@ public class MinesweeperController {
 
     private static final int OVERLAY_SECONDS = 5;
 
-    // =========================
     // Timer / Pause fields
-    // =========================
     private boolean paused = false;
     private long gameStartMillis = 0L;
     private long pausedAtMillis = 0L;
@@ -38,9 +36,7 @@ public class MinesweeperController {
     public GameSession getSession() { return session; }
     public boolean isPlayer1Turn() { return player1Turn; }
 
-    // =========================
     // Timer API
-    // =========================
     public void startGameTimer() {
         gameStartMillis = System.currentTimeMillis();
         paused = false;
@@ -75,9 +71,7 @@ public class MinesweeperController {
         return Math.max(0L, elapsed);
     }
 
-    // =========================
     // Click handling
-    // =========================
     public void handleLeftClick(boolean firstBoard, int row, int col) {
         if (paused) return;
 

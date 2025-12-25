@@ -3,11 +3,6 @@ package view;
 import model.GameHistory;
 import model.GameHistoryEntry;
 
-
-
-import model.GameHistory;
-import model.GameHistoryEntry;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;

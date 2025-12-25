@@ -51,8 +51,8 @@ public class MinesweeperGUI extends JPanel {
     private final MainMenuGUI parent;
     private MinesweeperController controller;
 
-    private JButton[][] buttons1;
-    private JButton[][] buttons2;
+    private CellButton[][] buttons1;
+    private CellButton[][] buttons2;
 
     private JPanel boardPanel1;
     private JPanel boardPanel2;
@@ -64,6 +64,8 @@ public class MinesweeperGUI extends JPanel {
     private JLabel playerBLabel;
     private JLabel turnLabel;
     private JLabel timeLabel;
+    private TurnIndicator p1Indicator;
+    private TurnIndicator p2Indicator;
 
     private PauseIconButton pauseBtn;
 
@@ -230,9 +232,23 @@ public class MinesweeperGUI extends JPanel {
         center.add(timeLabel);
         center.add(pauseBtn);
 
-        row.add(playerALabel, BorderLayout.WEST);
+        p1Indicator = new TurnIndicator();
+        p2Indicator = new TurnIndicator();
+
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        left.setOpaque(false);
+        left.add(p1Indicator);
+        left.add(playerALabel);
+
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        right.setOpaque(false);
+        right.add(playerBLabel);
+        right.add(p2Indicator);
+
+        row.add(left, BorderLayout.WEST);
         row.add(center, BorderLayout.CENTER);
-        row.add(playerBLabel, BorderLayout.EAST);
+        row.add(right, BorderLayout.EAST);
+
 
         return row;
     }
@@ -336,7 +352,7 @@ public class MinesweeperGUI extends JPanel {
 
         JPanel panel = new JPanel(new GridLayout(rows, cols));
         panel.setOpaque(false);
-        JButton[][] buttons = new JButton[rows][cols];
+        CellButton[][] buttons = new CellButton[rows][cols];
 
         int fontSize = 24;
         if (rows > 15) fontSize = 14;
@@ -344,10 +360,9 @@ public class MinesweeperGUI extends JPanel {
 
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
-                JButton btn = new JButton();
-                btn.setMargin(new Insets(0, 0, 0, 0));
-                btn.setFocusPainted(false);
-                btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, fontSize));
+            	CellButton btn = new CellButton();
+            	btn.setFocusPainted(false);
+            	btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, fontSize));
 
                 final int row = r;
                 final int col = c;
@@ -404,10 +419,10 @@ public class MinesweeperGUI extends JPanel {
         setBoardEnabled(buttons2, enabled);
     }
 
-    private void setBoardEnabled(JButton[][] buttons, boolean enabled) {
+    private void setBoardEnabled(CellButton[][] buttons, boolean enabled) {
         if (buttons == null) return;
-        for (JButton[] row : buttons) {
-            for (JButton b : row) b.setEnabled(enabled);
+        for (CellButton[] row : buttons) {
+            for (CellButton b : row) b.setEnabled(enabled);
         }
     }
 
@@ -452,9 +467,16 @@ public class MinesweeperGUI extends JPanel {
         scoreChip.setText("Score: " + session.getScore());
 
         updateTimeLabel();
+        updateTurnIndicatorUI();
+    }
+    
+    private void updateTurnIndicatorUI() {
+        boolean p1Turn = (controller == null) || controller.isPlayer1Turn();
+        p1Indicator.setActive(p1Turn);
+        p2Indicator.setActive(!p1Turn);
     }
 
-    private void updateBoardView(Board board, JButton[][] buttons, Color playerColor, boolean active) {
+    private void updateBoardView(Board board, CellButton[][] buttons, Color playerColor, boolean active) {
         if (buttons == null) return;
 
         int rows = board.getRows();
@@ -465,32 +487,25 @@ public class MinesweeperGUI extends JPanel {
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
                 Cell cell = board.getCell(r, c);
-                JButton btn = buttons[r][c];
+                CellButton btn = buttons[r][c];
 
                 if (!cell.isRevealed()) {
                     btn.setText(cell.isFlagged() ? "🚩" : "");
-                    btn.setBackground(baseColor);
-                    btn.setForeground(Color.WHITE);
+                    btn.setFill(baseColor);
+                    btn.setTextColor(Color.WHITE);
                     btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, btn.getFont().getSize()));
                 } else {
                     switch (cell.getType()) {
                     case MINE -> {
                         btn.setText("💣");
-                        btn.setBackground(new Color(150, 30, 30));
-                        btn.setForeground(Color.WHITE);
-                        
-                        // 1. إزالة الهوامش والحدود نهائياً لزيادة المساحة
-                        btn.setMargin(new Insets(0, 0, 0, 0));
-                        btn.setBorderPainted(false); // هذا السطر ضروري جداً للـ Hard!
-                        btn.setIcon(null);
+                        btn.setFill(new Color(170, 40, 40), new Color(190, 55, 55));
+                        btn.setTextColor(Color.WHITE);
 
                         int h = btn.getHeight();
                         
                         if (h > 0) {
-                            // في الـ Hard المربع بيكون صغير جداً، فبدنا الخط يكون نص حجم المربع تقريباً
                             int newSize = (int)(h * 0.6); 
                             
-                            // السماح للخط بأن يصغر حتى 8 بكسل (كان 10 سابقاً وهذا سبب المشكلة)
                             if (newSize < 8) newSize = 8;
                             
                             btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, newSize));
@@ -502,39 +517,39 @@ public class MinesweeperGUI extends JPanel {
                         
                         case NUMBER -> {
                             btn.setText(String.valueOf(cell.getAdjacentMines()));
-                            btn.setBackground(new Color(200, 200, 230));
-                            btn.setForeground(Color.BLACK);
+                            btn.setFill(new Color(210, 215, 235), new Color(220, 225, 245));
+                            btn.setTextColor(Color.BLACK);
                             btn.setFont(new Font("Segoe UI", Font.BOLD, btn.getFont().getSize()));
                         }
                         case EMPTY -> {
                             btn.setText("");
-                            btn.setBackground(new Color(180, 200, 220));
-                            btn.setForeground(Color.BLACK);
+                            btn.setFill(new Color(185, 205, 225), new Color(195, 215, 235));
+                            btn.setTextColor(new Color(40, 40, 40));
                             btn.setFont(new Font("Segoe UI", Font.BOLD, btn.getFont().getSize()));
                         }
                         case QUESTION -> {
                             if (cell.isPowerUsed()) {
                                 btn.setText("USED");
-                                btn.setBackground(new Color(160, 160, 160));
-                                btn.setForeground(Color.WHITE);
+                                btn.setFill(new Color(200, 180, 230), new Color(210, 195, 240)); 
+                                btn.setTextColor(Color.BLACK);
                                 btn.setFont(new Font("Segoe UI", Font.BOLD, Math.max(12, btn.getFont().getSize() - 6)));
                             } else {
                                 btn.setText("❓");
-                                btn.setBackground(new Color(200, 180, 230));
-                                btn.setForeground(Color.BLACK);
+                                btn.setFill(new Color(200, 180, 230), new Color(210, 195, 240)); 
+                                btn.setTextColor(Color.BLACK);
                                 btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, btn.getFont().getSize()));
                             }
                         }
                         case SURPRISE -> {
                             if (cell.isPowerUsed()) {
                                 btn.setText("USED");
-                                btn.setBackground(new Color(160, 160, 160));
-                                btn.setForeground(Color.WHITE);
+                                btn.setFill(new Color(210, 190, 120), new Color(220, 200, 135)); 
+                                btn.setTextColor(Color.BLACK);
                                 btn.setFont(new Font("Segoe UI", Font.BOLD, Math.max(12, btn.getFont().getSize() - 6)));
                             } else {
                                 btn.setText("🎁");
-                                btn.setBackground(new Color(210, 190, 120));
-                                btn.setForeground(Color.BLACK);
+                                btn.setFill(new Color(210, 190, 120), new Color(220, 200, 135)); // surprise
+                                btn.setTextColor(Color.BLACK);
                                 btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, btn.getFont().getSize()));
                             }
                         }
@@ -561,6 +576,7 @@ public class MinesweeperGUI extends JPanel {
             setBoardEnabled(buttons1, p1Active);
             setBoardEnabled(buttons2, !p1Active);
         }
+        updateTurnIndicatorUI();
     }
 
     // =========================
@@ -1083,6 +1099,7 @@ public class MinesweeperGUI extends JPanel {
                 g2.draw(heart);
             }
         }
+
     }
     /**
      * פונקציה עזר: יוצרת תווית (Label) שמשנה צבע לפי הת'ים.
