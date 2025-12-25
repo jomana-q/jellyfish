@@ -1,22 +1,28 @@
 package view;
 
+import controller.SoundManager;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.io.File;
 
 /**
- * מסך הגדרות (Settings) - כולל שליטה בווליום, ערכת נושא (Theme) וכפתורי שמירה.
- * עודכן כדי לתמוך באימוג'י (Segoe UI Emoji).
+ * מסך הגדרות (Settings) - מאפשר שליטה בווליום, בחירת קובץ מוזיקה, השתקה ושינוי ערכת נושא.
  */
 public class SettingsPanel extends JPanel {
 
     private final MainMenuGUI parent;
     
-    // רכיבי ה-GUI
+    // רכיבי הממשק (GUI Components)
     private JSlider volumeSlider;
     private JCheckBox muteCheckBox;
     private JComboBox<String> themeBox;
+    private JButton selectMusicBtn; // כפתור לבחירת מוזיקה מהמחשב
     private JButton saveBtn;
     private JButton backBtn;
+
+    // הפאנל הפנימי (הרקע השקוף) - נשמר כמשתנה כדי שנוכל לרענן אותו
+    private JPanel cardPanel; 
 
     public SettingsPanel(MainMenuGUI parent) {
         this.parent = parent;
@@ -28,64 +34,94 @@ public class SettingsPanel extends JPanel {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(40, 80, 40, 80));
 
-        // 1. כותרת העמוד (עם אימוג'י של גלגל שיניים)
+        // 1. כותרת העמוד
         JLabel title = new JLabel("Settings ⚙️", SwingConstants.CENTER);
         title.setForeground(Color.WHITE);
-        // שימוש בפונט Emoji כדי שהאייקון יופיע צבעוני ויפה
         title.setFont(new Font("Segoe UI Emoji", Font.BOLD, 32));
         add(title, BorderLayout.NORTH);
 
-        // 2. אזור המרכז - כרטיס מעוצב חצי שקוף
+        // 2. אזור המרכז (מעטפת)
         JPanel centerWrapper = new JPanel(new GridBagLayout());
         centerWrapper.setOpaque(false);
         
-        JPanel card = new JPanel(new GridBagLayout());
-        card.setOpaque(true);
-        card.setBackground(new Color(0, 0, 0, 100)); // רקע שחור שקוף למחצה
-        card.setBorder(BorderFactory.createLineBorder(new Color(255, 255, 255, 50), 1, true));
+        // הכרטיס השקוף שבו יושבים הכפתורים
+        cardPanel = new JPanel(new GridBagLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(getBackground());
+                g.fillRect(0, 0, getWidth(), getHeight());
+                super.paintComponent(g);
+            }
+        };
+        
+        cardPanel.setOpaque(false); 
+        cardPanel.setBackground(new Color(0, 0, 0, 150)); // لون الخلفية
+        cardPanel.setBorder(BorderFactory.createLineBorder(new Color(255, 255, 255, 50), 1, true));
         
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 15, 15, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
-        // --- הגדרות שמע (Volume) ---
+        // --- A. הגדרות שמע (Volume) ---
         JLabel volumeLabel = new JLabel("Music Volume 🔊:");
         styleLabel(volumeLabel);
         
         volumeSlider = new JSlider(0, 100, 50);
         volumeSlider.setOpaque(false);
         volumeSlider.setForeground(Color.WHITE);
+        volumeSlider.setMajorTickSpacing(25);
+        volumeSlider.setPaintTicks(true);
         
+        // הוספת מאזין לשינוי הווליום + תיקון הבעיה הגרפית (repaint)
+        volumeSlider.addChangeListener(e -> {
+            SoundManager.getInstance().setVolume(volumeSlider.getValue());
+            cardPanel.repaint(); // תיקון קריטי: מונע מריחות בגרפיקה
+        });
+
+        // --- B. בחירת מוזיקה אישית ---
+        JLabel customMusicLabel = new JLabel("Custom Music 🎵:");
+        styleLabel(customMusicLabel);
+
+        selectMusicBtn = new JButton("Choose File... 📂");
+        styleButton(selectMusicBtn, new Color(70, 130, 180)); // כחול
+        selectMusicBtn.addActionListener(e -> chooseMusicFile());
+
+        // --- C. השתקה (Mute) ---
         muteCheckBox = new JCheckBox("Mute All Sounds 🔇");
         styleCheckBox(muteCheckBox);
+        muteCheckBox.addActionListener(e -> {
+            SoundManager.getInstance().setMuted(muteCheckBox.isSelected());
+        });
 
-        // --- הגדרות ערכת נושא (Theme) ---
+        // --- D. ערכת נושא (Theme) ---
         JLabel themeLabel = new JLabel("Game Theme 🎨:");
         styleLabel(themeLabel);
         
         String[] themes = {"Dark Ocean 🌊 (Default)", "Light Mode ☀️", "High Contrast 👁️"};
         themeBox = new JComboBox<>(themes);
-        // פונט תומך אימוג'י בתוך הרשימה
         themeBox.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
 
-        // הוספת הרכיבים לתוך הכרטיס
+        // הוספת הרכיבים לתוך ה-Grid
         gbc.gridx = 0; gbc.gridy = 0;
-        card.add(volumeLabel, gbc);
-        
+        cardPanel.add(volumeLabel, gbc);
         gbc.gridx = 1;
-        card.add(volumeSlider, gbc);
+        cardPanel.add(volumeSlider, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 2;
-        card.add(muteCheckBox, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 1;
-        card.add(themeLabel, gbc);
-        
+        gbc.gridx = 0; gbc.gridy = 1;
+        cardPanel.add(customMusicLabel, gbc);
         gbc.gridx = 1;
-        card.add(themeBox, gbc);
+        cardPanel.add(selectMusicBtn, gbc);
 
-        centerWrapper.add(card);
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
+        cardPanel.add(muteCheckBox, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 1;
+        cardPanel.add(themeLabel, gbc);
+        gbc.gridx = 1;
+        cardPanel.add(themeBox, gbc);
+
+        centerWrapper.add(cardPanel);
         add(centerWrapper, BorderLayout.CENTER);
 
         // 3. כפתורים למטה (Save / Back)
@@ -103,36 +139,52 @@ public class SettingsPanel extends JPanel {
 
         add(buttonsPanel, BorderLayout.SOUTH);
 
-        // --- לוגיקה וכפתורים ---
-        
-        // חזרה לתפריט הראשי
+        // לוגיקת כפתורים
         backBtn.addActionListener(e -> parent.showMainMenu());
-
-        // שמירה (סימולציה)
         saveBtn.addActionListener(e -> {
             JOptionPane.showMessageDialog(this, "Settings Saved! \nההגדרות נשמרו בהצלחה! ✅");
             parent.showMainMenu();
         });
     }
 
-    // --- פונקציות עזר לעיצוב (עם פונט Emoji) ---
+    /**
+     * פונקציה לפתיחת חלון בחירת קובץ מוזיקה (WAV בלבד).
+     */
+    private void chooseMusicFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Select Background Music (.wav)");
+        
+        // סינון קבצים - הצגת קבצי WAV בלבד
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("WAV Sound Files", "wav");
+        fileChooser.setFileFilter(filter);
 
+        int result = fileChooser.showOpenDialog(this);
+        
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            
+            // הפעלת השיר הנבחר
+            SoundManager.getInstance().stopMusic(); 
+            SoundManager.getInstance().playBackgroundMusic(selectedFile.getAbsolutePath());
+            
+            JOptionPane.showMessageDialog(this, "Now Playing: \n" + selectedFile.getName() + " 🎶");
+        }
+    }
+
+    // פונקציות עזר לעיצוב
     private void styleLabel(JLabel lbl) {
         lbl.setForeground(Color.WHITE);
-        // שינוי לפונט Emoji
         lbl.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
     }
 
     private void styleCheckBox(JCheckBox cb) {
         cb.setOpaque(false);
         cb.setForeground(Color.WHITE);
-        // שינוי לפונט Emoji
         cb.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
         cb.setFocusPainted(false);
     }
 
     private void styleButton(JButton btn, Color bg) {
-        // שינוי לפונט Emoji
         btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
         btn.setForeground(Color.WHITE);
         btn.setBackground(bg);
