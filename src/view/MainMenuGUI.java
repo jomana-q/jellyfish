@@ -10,6 +10,9 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import model.ThemeManager;   
+import java.awt.event.*;    
+import java.awt.geom.*;      
 
 public class MainMenuGUI extends JFrame {
 
@@ -83,46 +86,60 @@ public class MainMenuGUI extends JFrame {
         centerPanel.setOpaque(false);
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
 
-        // רווח עליון גמיש
         centerPanel.add(Box.createVerticalStrut(50));
 
-        // 1. כותרת ראשית עם הצללה (Shadow Effect)
+        // 1. כותרת ראשית דינמית
         JLabel titleLabel = new JLabel("MINESWEEPER") {
-            // אוברייד כדי לצייר צל לטקסט
             @Override
             public void paintComponent(Graphics g) {
+                // ⭐ עדכון צבע אוטומטי
+                Color themeColor = model.ThemeManager.getInstance().getTextColor();
+                if (!getForeground().equals(themeColor)) {
+                    setForeground(themeColor);
+                }
+
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-                // ציור הצל (שחור)
-                g2.setColor(new Color(0, 0, 0, 100));
-                g2.drawString(getText(), 4, getHeight() - 4); // הזזה קלה לצל
+                // צל עדין (תמיד שחור שקוף)
+                g2.setColor(new Color(0, 0, 0, 50));
+                g2.drawString(getText(), 4, getHeight() - 4);
 
-                // ציור הטקסט עצמו
                 super.paintComponent(g);
             }
         };
-        titleLabel.setFont(new Font("Verdana", Font.BOLD, 60)); // פונט גדול ועבה
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setFont(new Font("Verdana", Font.BOLD, 60));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(titleLabel);
 
-        // 2. תת-כותרת (שם הקבוצה)
-        JLabel subTitleLabel = new JLabel("By Jellyfish Team ");
+        // 2. תת-כותרת דינמית
+        JLabel subTitleLabel = new JLabel("By Jellyfish Team ") {
+            @Override
+            public void paintComponent(Graphics g) {
+                // ⭐ עדכון צבע
+                Color themeColor = model.ThemeManager.getInstance().getTextColor();
+                // אם אנחנו במצב בהיר -> כהה, אם במצב כהה -> תכלת
+                Color subColor = model.ThemeManager.getInstance().isDarkMode() ? new Color(135, 206, 250) : new Color(50, 50, 150);
+                
+                if (!getForeground().equals(subColor)) {
+                    setForeground(subColor);
+                }
+                super.paintComponent(g);
+            }
+        };
         subTitleLabel.setFont(new Font("Segoe UI", Font.ITALIC, 22));
-        subTitleLabel.setForeground(new Color(135, 206, 250)); // תכלת בהיר
         subTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(subTitleLabel);
 
-        centerPanel.add(Box.createVerticalStrut(60)); // רווח
+        centerPanel.add(Box.createVerticalStrut(60));
 
-        // 3. כפתורים ראשיים (טקסט בלבד)
+        // 3. כפתורים (משתמשים ב-createStyledButton המתוקן)
         JButton startGameBtn = createStyledButton("Start Game");
         startGameBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         startGameBtn.addActionListener(e -> showSetupScreen());
         centerPanel.add(startGameBtn);
 
-        centerPanel.add(Box.createVerticalStrut(20)); // רווח בין כפתורים
+        centerPanel.add(Box.createVerticalStrut(20));
 
         JButton adminBtn = createStyledButton("Admin Login");
         adminBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -131,6 +148,7 @@ public class MainMenuGUI extends JFrame {
 
         return centerPanel;
     }
+    
     /** מעבר למסך התחברות אדמין */
     private void showAdminLogin() {
         if (adminLoginPanel == null) {
@@ -214,6 +232,15 @@ public class MainMenuGUI extends JFrame {
     public void showMainMenu() {
         centerLayout.show(centerContainer, "MENU");
     }
+    
+    /**
+     * רענון ערכת הנושא (צביעה מחדש של החלון).
+     * פונקציה זו נקראת מתוך SettingsPanel כשהמשתמש לוחץ Save.
+     */
+    public void refreshTheme() {
+        this.repaint(); // מצייר מחדש את הרקע עם הצבעים החדשים
+    }
+    
 
     /** מעבר למסך הגדרת משחק (שמות + קושי) */
     private void showSetupScreen() {
@@ -250,27 +277,32 @@ public class MainMenuGUI extends JFrame {
 
     private JButton createStyledButton(String text) {
         JButton btn = new JButton(text) {
-            // תיקון הבעיה הגרפית: מציירים את הרקע ידנית
+            // ⭐ תיקון: הכפתור בודק את הצבע מה-ThemeManager בכל פעם שהוא מצוייר
             @Override
             protected void paintComponent(Graphics g) {
+                // 1. קבלת הצבע המתאים (שחור בבהיר, לבן בכהה)
+            	Color themeColor = ThemeManager.getInstance().getTextColor();                // עדכון צבע הטקסט אם הוא השתנה
+                if (!getForeground().equals(themeColor)) {
+                    setForeground(themeColor);
+                }
+
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+                // אפקט מעבר עכבר (Rollover)
                 if (getModel().isRollover()) {
-                    // צבע בהיר יותר כשעוברים עם העכבר
                     g2.setColor(new Color(255, 255, 255, 50));
-                    g2.setStroke(new BasicStroke(2)); // מסגרת עבה יותר
+                    g2.setStroke(new BasicStroke(2));
                 } else {
-                    // צבע רגיל (שקוף למחצה)
                     g2.setColor(new Color(255, 255, 255, 20));
                     g2.setStroke(new BasicStroke(1));
                 }
 
-                // ציור הרקע (מלבן עם פינות עגולות)
+                // ציור הרקע
                 g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
 
-                // ציור המסגרת
-                g2.setColor(Color.WHITE);
+                // ⭐ ציור המסגרת בצבע הת'ים (ולא תמיד לבן)
+                g2.setColor(themeColor);
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
 
                 super.paintComponent(g);
@@ -278,13 +310,12 @@ public class MainMenuGUI extends JFrame {
         };
 
         btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20));
-        btn.setForeground(Color.WHITE);
-        btn.setContentAreaFilled(false); // ביטול הציור האוטומטי של ג'אווה (מונע ריבוע לבן)
+        // btn.setForeground(Color.WHITE); // ❌ מחקנו את השורה הזו כי הצבע נקבע דינמית למעלה
+        btn.setContentAreaFilled(false);
         btn.setFocusPainted(false);
-        btn.setBorderPainted(false); // אנחנו מציירים גבול ידנית למעלה
+        btn.setBorderPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // גודל אחיד לכפתורים
         btn.setPreferredSize(new Dimension(220, 50));
         btn.setMaximumSize(new Dimension(220, 50));
 
@@ -292,22 +323,31 @@ public class MainMenuGUI extends JFrame {
     }
 
     private JButton createIconButton(String icon) {
-        JButton btn = new JButton(icon);
+        JButton btn = new JButton(icon) {
+            // ⭐ תיקון: עדכון צבע דינמי גם לאייקונים
+            @Override
+            protected void paintComponent(Graphics g) {
+            	Color themeColor = ThemeManager.getInstance().getTextColor();                if (!getForeground().equals(themeColor)) {
+                    setForeground(themeColor);
+                }
+                super.paintComponent(g);
+            }
+        };
+        
         btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
-        btn.setForeground(Color.WHITE);
+        // btn.setForeground(Color.WHITE); // ❌ נמחק
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // אפקט מעבר עכבר לאייקון
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent evt) {
-                btn.setForeground(Color.CYAN); // שינוי צבע לתכלת
+                btn.setForeground(Color.CYAN); // אפקט תכלת במעבר עכבר
             }
-
             public void mouseExited(MouseEvent evt) {
-                btn.setForeground(Color.WHITE);
+                // כשהעכבר יוצא, נחזיר לצבע הת'ים
+                btn.setForeground(model.ThemeManager.getInstance().getTextColor());
             }
         });
 
@@ -347,7 +387,11 @@ public class MainMenuGUI extends JFrame {
                 activeSymbols[i] = symbols[randIdx];
             }
         }
-
+        
+        /**
+         * רענון ערכת הנושא (צביעה מחדש של החלון).
+         */
+      
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
@@ -357,13 +401,18 @@ public class MainMenuGUI extends JFrame {
             int w = getWidth();
             int h = getHeight();
 
-            // 1. גרדיאנט כהה
-            Color color1 = new Color(10, 25, 40);
-            Color color2 = new Color(25, 50, 60);
+         // 1. גרדיאנט (הצבעים נלקחים מ-ThemeManager)
+            // אנחנו משתמשים ב-Singleton כדי לקבל את הצבעים הנוכחיים (כהה/בהיר)
+            model.ThemeManager theme = model.ThemeManager.getInstance();
+            
+            Color color1 = theme.getBackgroundColor1(); // צבע עליון
+            Color color2 = theme.getBackgroundColor2(); // צבע תחתון
+            
             GradientPaint gp = new GradientPaint(0, 0, color1, 0, h, color2);
             g2d.setPaint(gp);
             g2d.fillRect(0, 0, w, h);
-
+            
+            
             // 2. רשת עדינה
             g2d.setColor(new Color(255, 255, 255, 10));
             int gridSize = 50;
@@ -372,7 +421,12 @@ public class MainMenuGUI extends JFrame {
 
             // 3. סמלים צפים (מוקשים, מתנות, לבבות)
             g2d.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 26));
-            g2d.setColor(new Color(255, 255, 255, 20)); // שקיפות
+         // ⭐ תיקון: בחירת צבע האייקונים לפי הת'ים
+         // אם כהה -> לבן שקוף. אם בהיר -> כחול/שחור שקוף.
+         Color iconColor = model.ThemeManager.getInstance().isDarkMode() 
+                 ? new Color(255, 255, 255, 30)  // לבן שקוף (לרקע כהה)
+                 : new Color(0, 0, 0, 30);       // שחור שקוף (לרקע בהיר)
+         g2d.setColor(iconColor);
 
             for (int i = 0; i < symbolPositions.length; i++) {
                 g2d.drawString(activeSymbols[i], symbolPositions[i].x, symbolPositions[i].y);

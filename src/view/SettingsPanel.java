@@ -55,7 +55,7 @@ public class SettingsPanel extends JPanel {
         };
         
         cardPanel.setOpaque(false); 
-        cardPanel.setBackground(new Color(0, 0, 0, 150)); // لون الخلفية
+        cardPanel.setBackground(new Color(0, 0, 0, 150));  
         cardPanel.setBorder(BorderFactory.createLineBorder(new Color(255, 255, 255, 50), 1, true));
         
         GridBagConstraints gbc = new GridBagConstraints();
@@ -95,13 +95,15 @@ public class SettingsPanel extends JPanel {
         });
 
         // --- D. ערכת נושא (Theme) ---
+     // --- D. הגדרות ערכת נושא (Theme) ---
         JLabel themeLabel = new JLabel("Game Theme 🎨:");
         styleLabel(themeLabel);
         
-        String[] themes = {"Dark Ocean 🌊 (Default)", "Light Mode ☀️", "High Contrast 👁️"};
+        // ⭐ שינוי: רק שתי אפשרויות (כהה ובהיר)
+        String[] themes = {"Dark Mode 🌙", "Light Mode ☀️"};
         themeBox = new JComboBox<>(themes);
         themeBox.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
-
+        
         // הוספת הרכיבים לתוך ה-Grid
         gbc.gridx = 0; gbc.gridy = 0;
         cardPanel.add(volumeLabel, gbc);
@@ -141,8 +143,19 @@ public class SettingsPanel extends JPanel {
 
         // לוגיקת כפתורים
         backBtn.addActionListener(e -> parent.showMainMenu());
+     // שמירה ועדכון הת'ים
         saveBtn.addActionListener(e -> {
+            // בדיקה מה המשתמש בחר: אינדקס 0 = Dark, אינדקס 1 = Light
+            boolean isDark = (themeBox.getSelectedIndex() == 0);
+            
+            // עדכון המנהל (ThemeManager)
+            model.ThemeManager.getInstance().setDarkMode(isDark);
+            
+            // הודעה למשתמש
             JOptionPane.showMessageDialog(this, "Settings Saved! \nההגדרות נשמרו בהצלחה! ✅");
+            
+            // ⭐ קריאה לפונקציה בחלון הראשי שתרענן את הצבעים
+            parent.refreshTheme(); 
             parent.showMainMenu();
         });
     }

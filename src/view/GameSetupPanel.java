@@ -1,7 +1,7 @@
 package view;
 
 import model.Difficulty;
-
+import model.ThemeManager; // ייבוא המנהל כדי לדעת איזה צבע להציג
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -38,23 +38,18 @@ public class GameSetupPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(40, 80, 40, 80));
 
         // כותרת
-        JLabel title = new JLabel("New Game", SwingConstants.CENTER);
-        title.setForeground(Color.WHITE);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        JLabel title = createDynamicLabel("New Game", new Font("Segoe UI", Font.BOLD, 32));
+        title.setHorizontalAlignment(SwingConstants.CENTER);
         add(title, BorderLayout.NORTH);
-
+        
         // טופס – שמות + רמת קושי
         JPanel form = new JPanel(new GridLayout(3, 2, 10, 20));
         form.setOpaque(false);
 
-        JLabel p1Label = new JLabel("Player 1 name:");
-        JLabel p2Label = new JLabel("Player 2 name:");
-        JLabel diffLabel = new JLabel("Difficulty:");
-
-        for (JLabel lbl : new JLabel[]{p1Label, p2Label, diffLabel}) {
-            lbl.setForeground(Color.WHITE);
-            lbl.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-        }
+     // יצירת תוויות חכמות (ללא צבע קבוע)
+        JLabel p1Label = createDynamicLabel("Player 1 name:", new Font("Segoe UI", Font.PLAIN, 18));
+        JLabel p2Label = createDynamicLabel("Player 2 name:", new Font("Segoe UI", Font.PLAIN, 18));
+        JLabel diffLabel = createDynamicLabel("Difficulty:", new Font("Segoe UI", Font.PLAIN, 18));
 
         styleTextField(player1Field);
         styleTextField(player2Field);
@@ -153,5 +148,30 @@ public class GameSetupPanel extends JPanel {
 
         // כאן כל המידע קיים – מתחילים משחק באותו חלון
         parent.startGame(p1, p2, diff);
+    }
+    /**
+     * פונקציה ליצירת כותרת שמשנה צבע לפי הת'ים (כהה/בהיר) באופן אוטומטי.
+     */
+    /**
+     * פונקציה עזר: יוצרת תווית (Label) שמשנה את צבע הטקסט אוטומטית לפי הת'ים.
+     * אם זה Dark Mode -> טקסט לבן.
+     * אם זה Light Mode -> טקסט שחור.
+     */
+    private JLabel createDynamicLabel(String text, Font font) {
+        JLabel lbl = new JLabel(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                // 1. קבלת הצבע המתאים מה-ThemeManager
+                Color themeColor = ThemeManager.getInstance().getTextColor();
+                
+                // 2. עדכון הצבע רק אם הוא שונה מהנוכחי
+                if (!getForeground().equals(themeColor)) {
+                    setForeground(themeColor);
+                }
+                super.paintComponent(g);
+            }
+        };
+        lbl.setFont(font);
+        return lbl;
     }
 }
