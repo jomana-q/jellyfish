@@ -1,6 +1,7 @@
 package view;
 
 import controller.MinesweeperController;
+import model.ThemeManager;
 import model.*;
 
 import javax.swing.*;
@@ -33,7 +34,7 @@ public class MinesweeperGUI extends JPanel {
     private CardLayout overlayCards;
     private JPanel overlayMessageCard;
     private JPanel overlayPauseCard;
-
+    
     private JLabel overlayLabel;
     private Timer overlayTimer;
 
@@ -208,25 +209,19 @@ public class MinesweeperGUI extends JPanel {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
 
-        playerALabel = new JLabel(player1Name);
-        playerALabel.setForeground(Color.WHITE);
-        playerALabel.setFont(FONT_TOP);
-
-        playerBLabel = new JLabel(player2Name, SwingConstants.RIGHT);
-        playerBLabel.setForeground(Color.WHITE);
-        playerBLabel.setFont(FONT_TOP);
-
+     // ⭐ תיקון: שמות השחקנים בצדדים
+     // ⭐ תיקון: שימוש בטקסט קבוע כדי למנוע שגיאות
+        playerALabel = createDynamicLabel(player1Name, new Font("Segoe UI", Font.BOLD, 14));
+        playerBLabel = createDynamicLabel(player2Name, new Font("Segoe UI", Font.BOLD, 14));
+        
         JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         center.setOpaque(false);
 
-        turnLabel = new JLabel("", SwingConstants.CENTER);
-        turnLabel.setForeground(Color.WHITE);
-        turnLabel.setFont(FONT_TOP);
-
-        timeLabel = new JLabel("Time: 00:00", SwingConstants.CENTER);
-        timeLabel.setForeground(new Color(220, 230, 245));
-        timeLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-
+        
+     // ⭐ תיקון: שימוש ב-createDynamicLabel
+        timeLabel = createDynamicLabel("Time: 00:00", new Font("Segoe UI", Font.BOLD, 18));
+        turnLabel = createDynamicLabel("Turn: Player 1", new Font("Segoe UI", Font.BOLD, 18));
+        
         pauseBtn = new PauseIconButton();
         pauseBtn.setToolTipText("Pause / Resume");
         pauseBtn.addActionListener(e -> togglePauseFromGUI());
@@ -246,13 +241,8 @@ public class MinesweeperGUI extends JPanel {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
 
-        JLabel boardALabel = new JLabel("Board A");
-        boardALabel.setForeground(Color.WHITE);
-        boardALabel.setFont(FONT_TITLE);
-
-        JLabel boardBLabel = new JLabel("Board B", SwingConstants.RIGHT);
-        boardBLabel.setForeground(Color.WHITE);
-        boardBLabel.setFont(FONT_TITLE);
+        JLabel boardALabel = createDynamicLabel("Board A", new Font("Segoe UI", Font.BOLD, 16));
+        JLabel boardBLabel = createDynamicLabel("Board B", new Font("Segoe UI", Font.BOLD, 16));
 
         JPanel legend = createLegendPanel();
 
@@ -1033,8 +1023,8 @@ public class MinesweeperGUI extends JPanel {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             g2.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-            g2.setColor(Color.WHITE);
-
+         // ⭐ תיקון: צבע הטקסט לפי הת'ים (שחור/לבן)
+            g2.setColor(model.ThemeManager.getInstance().getTextColor());
             String label = "Shared Lives: " + lives + " / " + maxLives;
             FontMetrics fm = g2.getFontMetrics();
             int x = 0;
@@ -1052,11 +1042,18 @@ public class MinesweeperGUI extends JPanel {
                 int hx = startX + i * (heartW + gap);
                 boolean filled = i < lives;
 
+             // ⭐ תיקון: צבע הלבבות משתנה לפי הת'ים
                 if (filled) {
-                    g2.setColor(Color.WHITE);
+                    // לב מלא: מקבל את צבע הטקסט הראשי (לבן או שחור)
+                    g2.setColor(model.ThemeManager.getInstance().getTextColor());
                     drawHeart(g2, hx, centerY - heartH / 2, heartW, heartH, true);
                 } else {
-                    g2.setColor(new Color(200, 200, 200, 160));
+                    // לב ריק: אפור בהיר במצב כהה, או אפור כהה במצב בהיר
+                    Color emptyColor = model.ThemeManager.getInstance().isDarkMode()
+                            ? new Color(200, 200, 200, 160) // לבן חלש (לרקע כהה)
+                            : new Color(0, 0, 0, 100);      // שחור חלש (לרקע בהיר)
+                    
+                    g2.setColor(emptyColor);
                     drawHeart(g2, hx, centerY - heartH / 2, heartW, heartH, false);
                 }
             }
@@ -1086,5 +1083,22 @@ public class MinesweeperGUI extends JPanel {
                 g2.draw(heart);
             }
         }
+    }
+    /**
+     * פונקציה עזר: יוצרת תווית (Label) שמשנה צבע לפי הת'ים.
+     */
+    private JLabel createDynamicLabel(String text, Font font) {
+        JLabel lbl = new JLabel(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Color themeColor = ThemeManager.getInstance().getTextColor();
+                if (!getForeground().equals(themeColor)) {
+                    setForeground(themeColor);
+                }
+                super.paintComponent(g);
+            }
+        };
+        lbl.setFont(font);
+        return lbl;
     }
 }
