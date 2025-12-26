@@ -139,6 +139,9 @@ public class AdminLoginPanel extends JPanel {
         userField.getDocument().addDocumentListener(dl);
         passField.getDocument().addDocumentListener(dl);
 
+        userField.addActionListener(e -> onLogin());
+        passField.addActionListener(e -> onLogin());
+        
         loginBtn.addActionListener(e -> onLogin());
     }
 
