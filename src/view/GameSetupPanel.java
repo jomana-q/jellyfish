@@ -127,6 +127,9 @@ public class GameSetupPanel extends JPanel {
         player1Field.getDocument().addDocumentListener(dl);
         player2Field.getDocument().addDocumentListener(dl);
 
+        player1Field.addActionListener(e -> onNext());
+        player2Field.addActionListener(e -> onNext());
+        
         nextBtn.addActionListener(e -> onNext());
     }
 
