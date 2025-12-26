@@ -34,11 +34,11 @@ public class MainMenuGUI extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 700); // גודל רחב יותר למסך מחשב
         setLocationRelativeTo(null); // מרכוז למסך
-
-        // פאנל רקע ראשי
+               // פאנל רקע ראשי
         JPanel mainPanel = new BackgroundPanel();
         mainPanel.setLayout(new BorderLayout());
         setContentPane(mainPanel);
+ /*
 
         // --- חלק עליון: כפתור הגדרות ---
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -51,7 +51,8 @@ public class MainMenuGUI extends JFrame {
         topPanel.add(settingsBtn);
 
         mainPanel.add(topPanel, BorderLayout.NORTH);
-
+        */
+        
         // --- מרכז: Container עם CardLayout ---
         centerContainer.setOpaque(false);
 
@@ -86,7 +87,22 @@ public class MainMenuGUI extends JFrame {
         centerPanel.setOpaque(false);
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
 
-        centerPanel.add(Box.createVerticalStrut(50));
+        // --- הוספת כפתור הגדרות (רק למסך הראשי) ---
+        // יצירת פאנל עליון לכפתור ההגדרות בתוך המסך הראשי
+        JPanel settingsWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        settingsWrapper.setOpaque(false);
+        settingsWrapper.setMaximumSize(new Dimension(2000, 60)); // רוחב מקסימלי, גובה קטן
+        settingsWrapper.setBorder(new EmptyBorder(10, 0, 0, 10));
+
+        JButton settingsBtn = createIconButton("⚙️");
+        settingsBtn.setToolTipText("Settings");
+        settingsBtn.addActionListener(e -> openSettingsPage());
+        
+        settingsWrapper.add(settingsBtn);
+        centerPanel.add(settingsWrapper);
+        // ------------------------------------------------
+
+        centerPanel.add(Box.createVerticalStrut(10)); // ריווח קטן אחרי הכפתור
 
         // 1. כותרת ראשית דינמית
         JLabel titleLabel = new JLabel("MINESWEEPER") {
@@ -118,7 +134,6 @@ public class MainMenuGUI extends JFrame {
             public void paintComponent(Graphics g) {
                 // ⭐ עדכון צבע
                 Color themeColor = model.ThemeManager.getInstance().getTextColor();
-                // אם אנחנו במצב בהיר -> כהה, אם במצב כהה -> תכלת
                 Color subColor = model.ThemeManager.getInstance().isDarkMode() ? new Color(135, 206, 250) : new Color(50, 50, 150);
                 
                 if (!getForeground().equals(subColor)) {
@@ -133,7 +148,7 @@ public class MainMenuGUI extends JFrame {
 
         centerPanel.add(Box.createVerticalStrut(60));
 
-        // 3. כפתורים (משתמשים ב-createStyledButton המתוקן)
+        // 3. כפתורים
         JButton startGameBtn = createStyledButton("Start Game");
         startGameBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         startGameBtn.addActionListener(e -> showSetupScreen());
