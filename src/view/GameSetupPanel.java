@@ -177,22 +177,37 @@ public class GameSetupPanel extends JPanel {
     private void styleTextField(JTextField tf) {
         tf.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         tf.setPreferredSize(new Dimension(260, 42));
-        tf.setForeground(Color.WHITE);
-        tf.setCaretColor(Color.WHITE);
-        tf.setBackground(new Color(22, 36, 56));
 
-        Border normal = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(255, 255, 255, 70), 1, true),
+        // בדיקה האם המצב כהה או בהיר (Dark/Light Check)
+        boolean isDark = ThemeManager.getInstance().isDarkMode();
+
+        // קביעת צבעים דינמית לפי המצב
+        Color textColor = isDark ? Color.WHITE : Color.BLACK;
+        Color bgColor = isDark ? new Color(22, 36, 56) : new Color(240, 240, 240); // כהה או אפור בהיר
+        Color caretColor = isDark ? Color.WHITE : Color.BLACK;
+        
+        // צבע מסגרת: לבן שקוף בכהה, שחור שקוף בבהיר
+        Color borderColor = isDark ? new Color(255, 255, 255, 70) : new Color(0, 0, 0, 70);
+
+        tf.setForeground(textColor);
+        tf.setCaretColor(caretColor);
+        tf.setBackground(bgColor);
+
+        // גבול רגיל (Border)
+        javax.swing.border.Border normal = BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(borderColor, 1, true),
                 BorderFactory.createEmptyBorder(10, 12, 10, 12)
         );
 
-        Border focused = BorderFactory.createCompoundBorder(
+        // גבול בפוקוס (Focus) - נשאר כחול בשני המצבים
+        javax.swing.border.Border focused = BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(0, 150, 255, 170), 2, true),
                 BorderFactory.createEmptyBorder(9, 11, 9, 11)
         );
 
         tf.setBorder(normal);
 
+        // מאזין לשינוי גבול בעת פוקוס
         tf.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override public void focusGained(java.awt.event.FocusEvent e) { tf.setBorder(focused); }
             @Override public void focusLost(java.awt.event.FocusEvent e) { tf.setBorder(normal); }
@@ -201,17 +216,27 @@ public class GameSetupPanel extends JPanel {
 
     private void styleCombo(JComboBox<?> box) {
         box.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        box.setForeground(Color.WHITE);
-        box.setBackground(new Color(22, 36, 56));
         box.setFocusable(false);
         box.setPreferredSize(new Dimension(260, 42));
 
+        // בדיקה האם המצב כהה (בודקים מול המנהל)
+        boolean isDark = ThemeManager.getInstance().isDarkMode();
+
+        // קביעת צבעים דינמית
+        Color bgColor = isDark ? new Color(22, 36, 56) : new Color(240, 240, 240); // רקע
+        Color textColor = isDark ? Color.WHITE : Color.BLACK;                      // טקסט
+        Color borderColor = isDark ? new Color(255, 255, 255, 70) : new Color(0, 0, 0, 70); // מסגרת
+        Color arrowColor = isDark ? new Color(220, 230, 245) : Color.BLACK;        // חץ
+
+        box.setForeground(textColor);
+        box.setBackground(bgColor);
+
         box.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(255, 255, 255, 70), 1, true),
+                BorderFactory.createLineBorder(borderColor, 1, true),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)
         ));
 
-        // arrow button
+        // עיצוב כפתור החץ (UI)
         box.setUI(new BasicComboBoxUI() {
             @Override
             protected JButton createArrowButton() {
@@ -220,7 +245,7 @@ public class GameSetupPanel extends JPanel {
                 arrow.setFocusPainted(false);
                 arrow.setContentAreaFilled(false);
                 arrow.setOpaque(false);
-                arrow.setForeground(new Color(220, 230, 245));
+                arrow.setForeground(arrowColor); // צבע החץ משתנה לפי הת'ים
                 arrow.setFont(new Font("Segoe UI", Font.BOLD, 13));
                 arrow.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 arrow.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
@@ -228,12 +253,23 @@ public class GameSetupPanel extends JPanel {
             }
         });
 
+        // עיצוב הרשימה הנפתחת (Renderer)
         box.setRenderer((list, value, index, isSelected, cellHasFocus) -> {
             JLabel r = new JLabel(value == null ? "" : value.toString());
             r.setOpaque(true);
             r.setFont(new Font("Segoe UI", Font.BOLD, 15));
-            r.setForeground(Color.WHITE);
-            r.setBackground(isSelected ? new Color(40, 70, 105) : new Color(22, 36, 56));
+            
+            // צבעים בתוך הרשימה עצמה
+            if (isSelected) {
+                // צבע בחירה (תמיד כחול כהה כדי שיהיה ברור)
+                r.setBackground(new Color(40, 70, 105));
+                r.setForeground(Color.WHITE);
+            } else {
+                // צבע רגיל תואם לרקע
+                r.setBackground(bgColor);
+                r.setForeground(textColor);
+            }
+            
             r.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
             return r;
         });
@@ -291,6 +327,8 @@ public class GameSetupPanel extends JPanel {
     private static class RoundedCardPanel extends JPanel {
         RoundedCardPanel() { setOpaque(false); }
 
+     // בתוך המחלקה הפנימית RoundedCardPanel (בסוף הקובץ)
+
         @Override
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
@@ -299,18 +337,33 @@ public class GameSetupPanel extends JPanel {
             int w = getWidth();
             int h = getHeight();
 
-            g2.setColor(new Color(0, 0, 0, 120));
+            // 1. קבלת מצב העיצוב (כהה או בהיר)
+            boolean isDark = ThemeManager.getInstance().isDarkMode();
+
+            // 2. קביעת צבע הרקע והצל לפי המצב
+            Color shadowColor = isDark ? new Color(0, 0, 0, 120) : new Color(100, 100, 100, 50);
+            
+            // אם כהה -> כחול כהה שקוף, אם בהיר -> לבן שקוף
+            Color cardColor = isDark ? new Color(10, 20, 35, 220) : new Color(255, 255, 255, 230);
+            
+            // אם כהה -> מסגרת לבנה עדינה, אם בהיר -> מסגרת אפורה עדינה
+            Color borderColor = isDark ? new Color(255, 255, 255, 70) : new Color(0, 0, 0, 50);
+
+            // ציור הצל
+            g2.setColor(shadowColor);
             g2.fillRoundRect(10, 12, w - 20, h - 18, 24, 24);
 
-            g2.setColor(new Color(10, 20, 35, 220));
+            // ציור הכרטיס עצמו
+            g2.setColor(cardColor);
             g2.fillRoundRect(6, 6, w - 12, h - 12, 22, 22);
 
-            g2.setColor(new Color(255, 255, 255, 70));
+            // ציור המסגרת
+            g2.setColor(borderColor);
             g2.setStroke(new BasicStroke(2f));
             g2.drawRoundRect(6, 6, w - 12, h - 12, 22, 22);
 
             g2.dispose();
-            super.paintComponent(g);
+            // super.paintComponent(g); // לא חובה כאן כי ציירנו הכל ידנית
         }
     }
 
@@ -334,10 +387,21 @@ public class GameSetupPanel extends JPanel {
             int x = (getWidth() - fm.stringWidth(text)) / 2;
             int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
 
-            g2.setColor(new Color(0, 150, 255, 70));
+            // ⭐ תיקון: בדיקה האם המצב כהה או בהיר
+            boolean isDark = ThemeManager.getInstance().isDarkMode();
+
+            // צבע הטקסט הראשי: לבן בכהה, אפור-כהה בבהיר
+            Color mainColor = isDark ? Color.WHITE : new Color(30, 30, 30);
+            
+            // צבע הצל/הילה: כחול בכהה, צל אפור עדין בבהיר
+            Color glowColor = isDark ? new Color(0, 150, 255, 70) : new Color(0, 0, 0, 30);
+
+            // ציור הצל (Shadow)
+            g2.setColor(glowColor);
             g2.drawString(text, x + 2, y + 2);
 
-            g2.setColor(Color.WHITE);
+            // ציור הטקסט (Main Text)
+            g2.setColor(mainColor);
             g2.drawString(text, x, y);
 
             g2.dispose();
