@@ -70,8 +70,21 @@ public class MainMenuGUI extends JFrame {
         // הקטנת כפתור היציאה מעט
         exitBtn.setMaximumSize(new Dimension(100, 40));
         exitBtn.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        exitBtn.addActionListener(e -> System.exit(0)); // סגירת התוכנית
-
+        exitBtn.addActionListener(e -> {
+            // יצירת דיאלוג אישור יציאה (Exit Confirmation Dialog)
+            int choice = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to exit the game?",
+                    "Exit Confirmation",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+            
+            // אם המשתמש לחץ על Yes -> סגור את התוכנית
+            if (choice == JOptionPane.YES_OPTION) {
+                System.exit(0);
+            }
+        });
         bottomPanel.add(exitBtn);
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
