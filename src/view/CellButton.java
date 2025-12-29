@@ -5,7 +5,7 @@ import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
 /**
- * Custom cell button 
+ * Custom cell button
  * - Rounded corners
  * - Subtle depth (highlight/shadow)
  * - Hover + Press effects
@@ -62,6 +62,31 @@ public class CellButton extends JButton {
         this.textColor = c;
         setForeground(c);
         repaint();
+    }
+
+    /**
+     * ✅ IMPORTANT:
+     * Set icon AND disabledIcon to the same image so Swing won't "wash out" the icon when disabled.
+     */
+    public void setScaledIcon(ImageIcon src) {
+        if (src == null) {
+            setIcon(null);
+            setDisabledIcon(null);
+            return;
+        }
+
+        // scale to button size (fallback if size not ready yet)
+        int w = getWidth();
+        int h = getHeight();
+        int size = Math.min(w, h) - 10;
+        if (size <= 0) size = 22;
+
+        Image img = src.getImage().getScaledInstance(size, size, Image.SCALE_SMOOTH);
+        ImageIcon scaled = new ImageIcon(img);
+
+        setText("");                 // no text when using icon
+        setIcon(scaled);
+        setDisabledIcon(scaled);     // ✅ prevents whitening
     }
 
     @Override

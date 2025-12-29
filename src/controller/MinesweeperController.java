@@ -212,6 +212,7 @@ public class MinesweeperController {
 
         player1Turn = !player1Turn;
         view.updateTurnHighlight();
+        view.refreshView();
     }
 
     private String formatPowerSubtitle(int payDeltaScore, int payDeltaLives,
