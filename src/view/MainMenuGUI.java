@@ -35,9 +35,10 @@ public class MainMenuGUI extends JFrame {
         setSize(900, 700); // גודל רחב יותר למסך מחשב
         setLocationRelativeTo(null); // מרכוז למסך
                // פאנל רקע ראשי
-        JPanel mainPanel = new BackgroundPanel();
+        JPanel mainPanel = new BackgroundImagePanel("/images/background.jpeg");
         mainPanel.setLayout(new BorderLayout());
         setContentPane(mainPanel);
+        
  /*
 
         // --- חלק עליון: כפתור הגדרות ---
