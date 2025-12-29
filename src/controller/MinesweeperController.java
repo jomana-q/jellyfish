@@ -13,7 +13,7 @@ public class MinesweeperController {
 
     private boolean player1Turn = true;
 
-    private static final int OVERLAY_SECONDS = 5;
+    private static final int OVERLAY_SECONDS = 3;
 
     // Timer / Pause fields
     private boolean paused = false;
@@ -45,7 +45,7 @@ public class MinesweeperController {
     }
 
     public void togglePause() {
-        if (gameStartMillis == 0L) return; // timer not started yet
+        if (gameStartMillis == 0L) return;
 
         long now = System.currentTimeMillis();
         if (!paused) {
@@ -58,9 +58,7 @@ public class MinesweeperController {
         }
     }
 
-    public boolean isPaused() {
-        return paused;
-    }
+    public boolean isPaused() { return paused; }
 
     /** elapsed time EXCLUDING pauses */
     public long getElapsedActiveMillis() {
@@ -80,22 +78,28 @@ public class MinesweeperController {
 
         if (cell.isRevealed() && !board.canActivateSpecial(row, col)) return;
 
+        // activate question/surprise
         if (board.canActivateSpecial(row, col)) {
 
             if (!session.canPayForPower()) {
-                view.showTemporaryOverlay(
-                        "NOT ENOUGH SCORE\nActivation cost: -" + session.getDifficulty().getPowerCost() + " pts",
+                view.showResultOverlay(
+                        MinesweeperGUI.OverlayType.INFO,
+                        "NOT ENOUGH SCORE",
+                        "Need " + session.getDifficulty().getPowerCost() + " pts to activate",
                         OVERLAY_SECONDS
                 );
                 view.refreshView();
                 return;
             }
 
+            // Question bank empty?
             if (cell.getType() == CellType.QUESTION) {
                 Question test = QuestionBank.getInstance().getRandomQuestion();
                 if (test == null) {
-                    view.showTemporaryOverlay(
-                            "NO QUESTIONS LOADED\nMake sure questions.csv exists",
+                    view.showResultOverlay(
+                            MinesweeperGUI.OverlayType.INFO,
+                            "NO QUESTIONS",
+                            "questions.csv missing or empty",
                             OVERLAY_SECONDS
                     );
                     view.refreshView();
@@ -103,37 +107,39 @@ public class MinesweeperController {
                 }
             }
 
-            int scoreBeforeAll = session.getScore();
-            int livesBeforeAll = session.getLives();
-
-            int cost = session.getDifficulty().getPowerCost();
-
+            // Pay activation cost first
+            int scoreBeforePay = session.getScore();
+            int livesBeforePay = session.getLives();
             session.payForPower();
             int scoreAfterPay = session.getScore();
             int livesAfterPay = session.getLives();
 
-            String overlayMsg;
+            int payDeltaScore = scoreAfterPay - scoreBeforePay;
+            int payDeltaLives = livesAfterPay - livesBeforePay; // usually 0
 
+            // SURPRISE
             if (cell.getType() == CellType.SURPRISE) {
                 boolean good = Math.random() < 0.5;
 
                 session.applySurpriseOutcome(good);
                 board.markSpecialUsed(row, col);
 
-                int outcomeScore = session.getScore() - scoreAfterPay;
-                int outcomeLives = session.getLives() - livesAfterPay;
-                int totalScoreDelta = session.getScore() - scoreBeforeAll;
-                int totalLivesDelta = session.getLives() - livesBeforeAll;
+                int outcomeDeltaScore = session.getScore() - scoreAfterPay;
+                int outcomeDeltaLives = session.getLives() - livesAfterPay;
 
-                overlayMsg =
-                        (good ? "GOOD SURPRISE!" : "BAD SURPRISE!") +
-                        "\nActivation Surprise cost: -" + cost + " pts" +
-                        "\nSurprise effect: " + signed(outcomeScore) + " pts, Lives " + signed(outcomeLives) +
-                        "\nTotal score change: " + signed(totalScoreDelta) +
-                        "\nTotal lives change: " + signed(totalLivesDelta);
+                view.refreshView();
+                view.showResultOverlay(
+                        good ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
+                        good ? "GOOD SURPRISE!" : "BAD SURPRISE!",
+                        formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, null),
+                        OVERLAY_SECONDS
+                );
+                endTurn();
+                return;
+            }
 
-            } else if (cell.getType() == CellType.QUESTION) {
-
+            // QUESTION
+            if (cell.getType() == CellType.QUESTION) {
                 Question q = QuestionBank.getInstance().getRandomQuestion();
                 boolean correct = QuestionDialog.showQuestionDialog(view, q);
 
@@ -147,32 +153,33 @@ public class MinesweeperController {
 
                 board.markSpecialUsed(row, col);
 
-                int outcomeScore = session.getScore() - scoreAfterPay;
-                int outcomeLives = session.getLives() - livesAfterPay;
-                int totalScoreDelta = session.getScore() - scoreBeforeAll;
-                int totalLivesDelta = session.getLives() - livesBeforeAll;
+                int outcomeDeltaScore = session.getScore() - scoreAfterPay;
+                int outcomeDeltaLives = session.getLives() - livesAfterPay;
 
-                overlayMsg =
-                        (correct ? "CORRECT ANSWER!" : "WRONG ANSWER!") +
-                        "\nActivation Question cost: -" + cost + " pts" +
-                        "\nAnswer effect: " + signed(outcomeScore) + " pts, Lives " + signed(outcomeLives) +
-                        "\nTotal score change: " + signed(totalScoreDelta) +
-                        "\nTotal lives change: " + signed(totalLivesDelta);
-
-                if (bonus != QuestionBonusEffect.NONE) {
-                    overlayMsg += "\nBONUS: " + bonus;
-                }
-
-            } else {
-                overlayMsg = "CANNOT ACTIVATE THIS CELL";
+                view.refreshView();
+                view.showResultOverlay(
+                        correct ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
+                        correct ? "CORRECT ANSWER!" : "WRONG ANSWER!",
+                        formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, bonus),
+                        OVERLAY_SECONDS
+                );
+                endTurn();
+                return;
             }
 
+            // fallback
+            view.showResultOverlay(
+                    MinesweeperGUI.OverlayType.INFO,
+                    "CANNOT ACTIVATE",
+                    "Try another cell",
+                    OVERLAY_SECONDS
+            );
             view.refreshView();
-            view.showTemporaryOverlay(overlayMsg, OVERLAY_SECONDS);
             endTurn();
             return;
         }
 
+        // normal open
         board.openCell(row, col, session);
         endTurn();
     }
@@ -186,22 +193,8 @@ public class MinesweeperController {
         if (cell.isRevealed()) return;
         if (cell.isPowerUsed()) return;
 
-        int scoreBefore = session.getScore();
-        int livesBefore = session.getLives();
-
         board.toggleFlag(row, col, session);
-
-        int totalScoreDelta = session.getScore() - scoreBefore;
-        int totalLivesDelta = session.getLives() - livesBefore;
-
         view.refreshView();
-        view.showTemporaryOverlay(
-                "FLAG TOGGLED" +
-                        "\nTotal score change: " + signed(totalScoreDelta) +
-                        "\nTotal lives change: " + signed(totalLivesDelta),
-                OVERLAY_SECONDS
-        );
-
         endTurn();
     }
 
@@ -212,7 +205,6 @@ public class MinesweeperController {
             view.showGameOver(true);
             return;
         }
-
         if (session.isOutOfLives()) {
             view.showGameOver(false);
             return;
@@ -222,9 +214,52 @@ public class MinesweeperController {
         view.updateTurnHighlight();
     }
 
-    private String signed(int x) {
-        if (x > 0) return "+" + x;
-        return String.valueOf(x);
+    private String formatPowerSubtitle(int payDeltaScore, int payDeltaLives,
+                                       int outcomeDeltaScore, int outcomeDeltaLives,
+                                       QuestionBonusEffect bonus) {
+
+        StringBuilder sb = new StringBuilder();
+
+        // Activation (cost)
+        if (payDeltaScore != 0 || payDeltaLives != 0) {
+            sb.append("Activation: ")
+              .append(formatDelta(payDeltaScore, payDeltaLives));
+        }
+
+        // Outcome
+        if (sb.length() > 0) sb.append("  |  ");
+        sb.append("Outcome: ")
+          .append(formatDelta(outcomeDeltaScore, outcomeDeltaLives));
+
+        // Bonus (optional)
+        if (bonus != null && bonus != QuestionBonusEffect.NONE) {
+            sb.append("  |  Bonus: ").append(shortBonusName(bonus));
+        }
+
+        return sb.toString();
     }
-    
+
+    private String formatDelta(int deltaScore, int deltaLives) {
+        return signed(deltaScore) + " pts, " + signedLives(deltaLives);
+    }
+
+    private String signed(int x) {
+        return (x > 0) ? "+" + x : String.valueOf(x);
+    }
+
+    private String signedLives(int deltaLives) {
+        if (deltaLives == 1) return "+1 life";
+        if (deltaLives == -1) return "-1 life";
+        if (deltaLives > 1) return "+" + deltaLives + " lives";
+        if (deltaLives < -1) return deltaLives + " lives";
+        return "0 lives";
+    }
+
+    private String shortBonusName(QuestionBonusEffect b) {
+        return switch (b) {
+            case REVEAL_MINE -> "Reveal Mine";
+            case REVEAL_3X3 -> "Reveal 3x3";
+            default -> b.name();
+        };
+    }
 }
