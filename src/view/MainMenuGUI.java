@@ -68,9 +68,12 @@ public class MainMenuGUI extends JFrame {
         bottomPanel.setBorder(new EmptyBorder(0, 20, 20, 0)); // ריווח מלמטה ומשמאל
 
         JButton exitBtn = createStyledButton("Exit");
-        // הקטנת כפתור היציאה מעט
-        exitBtn.setMaximumSize(new Dimension(100, 40));
-        exitBtn.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        
+        exitBtn.setPreferredSize(new Dimension(120, 45)); 
+        exitBtn.setMaximumSize(new Dimension(120, 45));
+
+        exitBtn.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        
         exitBtn.addActionListener(e -> {
             // יצירת דיאלוג אישור יציאה (Exit Confirmation Dialog)
             int choice = JOptionPane.showConfirmDialog(
@@ -119,34 +122,63 @@ public class MainMenuGUI extends JFrame {
         JLabel titleLabel = new JLabel("MINESWEEPER") {
             @Override
             public void paintComponent(Graphics g) {
+                // ⭐ עדכון צבע אוטומטי
                 Color themeColor = model.ThemeManager.getInstance().getTextColor();
-                if (!getForeground().equals(themeColor)) setForeground(themeColor);
+                if (!getForeground().equals(themeColor)) {
+                    setForeground(themeColor);
+                }
+
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                g2.setColor(new Color(0, 0, 0, 50));
-                g2.drawString(getText(), 4, getHeight() - 4);
+
+                // ⭐ שינוי: חיזוק הצל (יותר כהה ומודגש)
+                g2.setColor(new Color(0, 0, 0, 180)); // שחור חזק יותר (במקום 50)
+                // ציור הצל פעמיים להדגשה
+                g2.drawString(getText(), 3, getHeight() - 3);
+                g2.drawString(getText(), 5, getHeight() - 5);
+
                 super.paintComponent(g);
             }
         };
-        titleLabel.setFont(new Font("Verdana", Font.BOLD, 60));
+        titleLabel.setFont(new Font("Verdana", Font.BOLD, 60)); // נשאר Bold
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(titleLabel);
 
+        // 2. תת-כותרת דינמית (מודגשת יותר)
         JLabel subTitleLabel = new JLabel("By Jellyfish Team ") {
             @Override
             public void paintComponent(Graphics g) {
                 Color themeColor = model.ThemeManager.getInstance().getTextColor();
-                Color subColor = model.ThemeManager.getInstance().isDarkMode() ? new Color(135, 206, 250) : new Color(50, 50, 150);
-                if (!getForeground().equals(subColor)) setForeground(subColor);
-                super.paintComponent(g);
+                Color subColor = model.ThemeManager.getInstance().isDarkMode() ? new Color(170, 220, 255) : new Color(30, 30, 180);
+                
+                if (!getForeground().equals(subColor)) {
+                    setForeground(subColor);
+                }
+
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                
+                String text = getText();
+                FontMetrics fm = g.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(text)) / 2;
+                int y = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
+
+                g2.setColor(new Color(0, 255, 255, 80)); 
+                g2.drawString(text, x - 1, y);
+                g2.drawString(text, x + 1, y);
+                g2.drawString(text, x, y - 1);
+                g2.drawString(text, x, y + 1);
+
+                super.paintComponent(g); 
             }
         };
-        subTitleLabel.setFont(new Font("Segoe UI", Font.ITALIC, 22));
+        
+        subTitleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26)); 
         subTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(subTitleLabel);
 
         centerPanel.add(Box.createVerticalStrut(60));
-
+        
         // === הכפתורים ===
 
         // 1. Start Game
@@ -305,51 +337,58 @@ public class MainMenuGUI extends JFrame {
 
     private JButton createStyledButton(String text) {
         JButton btn = new JButton(text) {
-            // ⭐ תיקון: הכפתור בודק את הצבע מה-ThemeManager בכל פעם שהוא מצוייר
             @Override
             protected void paintComponent(Graphics g) {
-                // 1. קבלת הצבע המתאים (שחור בבהיר, לבן בכהה)
-            	Color themeColor = ThemeManager.getInstance().getTextColor();                // עדכון צבע הטקסט אם הוא השתנה
-                if (!getForeground().equals(themeColor)) {
-                    setForeground(themeColor);
-                }
-
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // אפקט מעבר עכבר (Rollover)
+                Color themeColor = ThemeManager.getInstance().getTextColor(); 
+                Color crystalGlow = new Color(0, 240, 255); 
+
                 if (getModel().isRollover()) {
-                    g2.setColor(new Color(255, 255, 255, 50));
-                    g2.setStroke(new BasicStroke(2));
+                    
+                    setForeground(crystalGlow); 
+                    
+                    g2.setColor(new Color(0, 240, 255, 60)); 
+                    g2.setStroke(new BasicStroke(3)); 
+                    
                 } else {
-                    g2.setColor(new Color(255, 255, 255, 20));
-                    g2.setStroke(new BasicStroke(1));
+                    
+                    if (!getForeground().equals(themeColor)) {
+                        setForeground(themeColor);
+                    }
+                    
+                    g2.setColor(new Color(255, 255, 255, 20)); 
+                    g2.setStroke(new BasicStroke(2)); 
                 }
 
-                // ציור הרקע
                 g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
 
-                // ⭐ ציור המסגרת בצבע הת'ים (ולא תמיד לבן)
-                g2.setColor(themeColor);
+                if (getModel().isRollover()) {
+                    g2.setColor(crystalGlow);
+                } else {
+                    g2.setColor(themeColor);
+                }
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 30, 30);
 
                 super.paintComponent(g);
             }
         };
 
-        btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20));
-        // btn.setForeground(Color.WHITE); // ❌ מחקנו את השורה הזו כי הצבע נקבע דינמית למעלה
+        // باقي الخصائص كما هي تماماً
+        btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 22));
+        
         btn.setContentAreaFilled(false);
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        btn.setPreferredSize(new Dimension(220, 50));
-        btn.setMaximumSize(new Dimension(220, 50));
+        btn.setPreferredSize(new Dimension(240, 55)); 
+        btn.setMaximumSize(new Dimension(240, 55));
 
         return btn;
     }
-
+    
     private JButton createIconButton(String icon) {
         JButton btn = new JButton(icon) {
             // ⭐ תיקון: עדכון צבע דינמי גם לאייקונים
