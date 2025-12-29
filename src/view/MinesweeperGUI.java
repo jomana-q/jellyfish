@@ -3,6 +3,7 @@ package view;
 import controller.MinesweeperController;
 import model.*;
 import model.ThemeManager;
+import view.LegendIconChip;
 
 import javax.swing.*;
 import java.awt.*;
@@ -57,6 +58,12 @@ public class MinesweeperGUI extends JPanel {
     private LivesHeartsPanel livesHeartsPanel;
     private JLabel scoreChip;
 
+    // Icons (loaded from /images/)
+    private final ImageIcon ICON_QUESTION  = loadIcon("/images/Ques.png");
+    private final ImageIcon ICON_SURPRISE  = loadIcon("/images/surprise.png");
+    private final ImageIcon ICON_MINE      = loadIcon("/images/Boom.png");
+    private final ImageIcon ICON_FLAG      = loadIcon("/images/flag.png");
+
     // clock refresh
     private Timer uiClockTimer;
 
@@ -83,6 +90,15 @@ public class MinesweeperGUI extends JPanel {
         startUiClock();
         updateTurnHighlight();
         refreshView();
+    }
+
+    private ImageIcon loadIcon(String path) {
+        java.net.URL url = getClass().getResource(path);
+        if (url == null) {
+            System.err.println("Missing icon resource: " + path);
+            return null;
+        }
+        return new ImageIcon(url);
     }
 
     // =========================
@@ -119,7 +135,6 @@ public class MinesweeperGUI extends JPanel {
         }
     }
 
-    /** Backward compatibility: infer style from title keywords */
     public void showResultOverlay(String title, String subtitle, int seconds) {
         OverlayStyle style = OverlayStyle.fromTitle(title);
         OverlayType type = switch (style) {
@@ -130,7 +145,6 @@ public class MinesweeperGUI extends JPanel {
         showResultOverlay(type, title, subtitle, seconds);
     }
 
-    /** Backward compatibility */
     public void showTemporaryOverlay(String message) {
         String t = (message == null) ? "" : message;
         String[] lines = t.split("\n", 2);
@@ -306,14 +320,32 @@ public class MinesweeperGUI extends JPanel {
     }
 
     private JPanel createLegendPanel() {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 0));
         p.setOpaque(false);
 
-        p.add(new LegendIconChip("❓", new Color(200, 180, 230), Color.BLACK));
-        p.add(new LegendIconChip("🎁", new Color(210, 190, 120), Color.BLACK));
-        p.add(new LegendIconChip("💣", new Color(150, 30, 30), Color.WHITE));
+        p.add(makeLegendItem(new LegendIconChip(ICON_QUESTION, new Color(140, 190, 255, 90)), "Question"));
+        p.add(makeLegendItem(new LegendIconChip(ICON_SURPRISE, new Color(255, 170, 210, 90)), "Surprise"));
+        p.add(makeLegendItem(new LegendIconChip(ICON_MINE,     new Color(255, 120, 120, 85)), "Mine"));
 
         return p;
+    }
+
+    private JPanel makeLegendItem(JComponent chip, String text) {
+        JPanel box = new JPanel();
+        box.setOpaque(false);
+        box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
+
+        chip.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel lbl = new JLabel(text);
+        lbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lbl.setForeground(ThemeManager.getInstance().getTextColor());
+
+        box.add(chip);
+        box.add(Box.createVerticalStrut(3));
+        box.add(lbl);
+        return box;
     }
 
     // =========================
@@ -500,18 +532,14 @@ public class MinesweeperGUI extends JPanel {
 
         timeLabel.setText(String.format("Time: %02d:%02d", minutes, seconds));
     }
-
-    // =========================
-    // Refresh
-    // =========================
-
+    
     public void refreshView() {
         boolean p1Turn = (controller == null) || controller.isPlayer1Turn();
 
         ThemeManager tm = ThemeManager.getInstance();
         Color board1Color = tm.getBoardAColor();
-        Color board2Color = tm.getBoardBColor(); 
-        
+        Color board2Color = tm.getBoardBColor();
+
         updateBoardView(board1, buttons1, board1Color, p1Turn);
         updateBoardView(board2, buttons2, board2Color, !p1Turn);
 
@@ -533,6 +561,10 @@ public class MinesweeperGUI extends JPanel {
         p2Indicator.setActive(!p1Turn);
     }
 
+    // =========================
+    // Refresh
+    // =========================
+
     private void updateBoardView(Board board, CellButton[][] buttons, Color playerColor, boolean active) {
         if (buttons == null) return;
 
@@ -540,27 +572,32 @@ public class MinesweeperGUI extends JPanel {
         int cols = board.getCols();
 
         ThemeManager tm = ThemeManager.getInstance();
-
         Color baseColor = active ? playerColor : darker(playerColor, 0.6);
 
-        // ===== Glass (transparent revealed background for ALL) =====
-        // you can tune alpha: 35..90
+        //Glass look (light + transparent)
         Color glass = tm.isDarkMode()
-                ? new Color(255, 255, 255, 55)
-                : new Color(30, 60, 100, 40);
+                ? new Color(255, 255, 255, 45)
+                : new Color(255, 255, 255, 35);
 
-        // Special tinted glass
-        Color questionBlueGlass = tm.isDarkMode()
-                ? new Color(80, 170, 255, 70)    // blue
-                : new Color(60, 140, 230, 55);
+        //Mine: light red / transparent
+        Color mineGlass = tm.isDarkMode()
+                ? new Color(255, 120, 120, 85)
+                : new Color(255, 140, 140, 70);
 
-        Color surpriseLilacGlass = tm.isDarkMode()
-                ? new Color(190, 140, 255, 70)   // lilac
-                : new Color(175, 120, 240, 55);
+        //Question: light blue / transparent
+        Color questionGlass = tm.isDarkMode()
+                ? new Color(140, 190, 255, 90)
+                : new Color(160, 205, 255, 75);
 
+        //Surprise: light pink / transparent
+        Color surpriseGlass = tm.isDarkMode()
+                ? new Color(255, 170, 210, 90)
+                : new Color(255, 185, 220, 75);
+
+        // Used power: softer glass
         Color usedGlass = tm.isDarkMode()
-                ? new Color(255, 255, 255, 40)
-                : new Color(30, 60, 100, 30);
+                ? new Color(255, 255, 255, 30)
+                : new Color(255, 255, 255, 25);
 
         Color textOnGlass = tm.getTextColor();
 
@@ -570,67 +607,75 @@ public class MinesweeperGUI extends JPanel {
                 Cell cell = board.getCell(r, c);
                 CellButton btn = buttons[r][c];
 
+                //NOT revealed
                 if (!cell.isRevealed()) {
-                    btn.setText(cell.isFlagged() ? "🚩" : "");
                     btn.setFill(baseColor);
                     btn.setTextColor(Color.WHITE);
-                    btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, btn.getFont().getSize()));
+
+                    if (cell.isFlagged()) {
+                        btn.setScaledIcon(ICON_FLAG);
+                    } else {
+                        btn.setIcon(null);
+                        btn.setText("");
+                    }
                     continue;
                 }
 
+                //revealed
                 switch (cell.getType()) {
 
                     case MINE -> {
-                        // Bomb: solid RED
-                        btn.setText("💣");
-                        btn.setFill(new Color(200, 35, 45), new Color(235, 70, 75));
+                        btn.setIcon(null);
+                        btn.setText("");
+                        btn.setFill(mineGlass);            
+                        btn.setScaledIcon(ICON_MINE);
                         btn.setTextColor(Color.WHITE);
-
-                        int h = btn.getHeight();
-                        int newSize = (h > 0) ? Math.max(8, (int) (h * 0.6)) : 12;
-                        btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, newSize));
                     }
 
                     case NUMBER -> {
+                        btn.setIcon(null);
                         btn.setText(String.valueOf(cell.getAdjacentMines()));
-                        // transparent glass for numbers
                         btn.setFill(glass);
                         btn.setTextColor(textOnGlass);
                         btn.setFont(new Font("Segoe UI", Font.BOLD, btn.getFont().getSize()));
                     }
 
                     case EMPTY -> {
+                        btn.setIcon(null);
                         btn.setText("");
-                        btn.setFill(glass); // transparent
+                        btn.setFill(glass);
                         btn.setTextColor(textOnGlass);
-                        btn.setFont(new Font("Segoe UI", Font.BOLD, btn.getFont().getSize()));
                     }
 
                     case QUESTION -> {
                         if (cell.isPowerUsed()) {
+                            btn.setIcon(null);
                             btn.setText("USED");
                             btn.setFill(usedGlass);
                             btn.setTextColor(textOnGlass);
                             btn.setFont(new Font("Segoe UI", Font.BOLD, Math.max(12, btn.getFont().getSize() - 6)));
                         } else {
-                            btn.setText("❓");
-                            btn.setFill(questionBlueGlass);
+                            btn.setIcon(null);
+                            btn.setText("");
+                            btn.setFill(questionGlass);     // ✅ light transparent blue
+                            btn.setScaledIcon(ICON_QUESTION);
                             btn.setTextColor(Color.WHITE);
-                            btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, btn.getFont().getSize()));
                         }
                     }
 
                     case SURPRISE -> {
                         if (cell.isPowerUsed()) {
+                            btn.setIcon(null);
                             btn.setText("USED");
                             btn.setFill(usedGlass);
                             btn.setTextColor(textOnGlass);
                             btn.setFont(new Font("Segoe UI", Font.BOLD, Math.max(12, btn.getFont().getSize() - 6)));
                         } else {
-                            btn.setText("🎁");
-                            btn.setFill(surpriseLilacGlass);
+                            btn.setIcon(null);
+                            btn.setText("");
+                            btn.setFill(surpriseGlass);     // ✅ light transparent pink
+                            btn.setScaledIcon(ICON_SURPRISE);
                             btn.setTextColor(Color.WHITE);
-                            btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, btn.getFont().getSize()));
                         }
                     }
                 }
@@ -658,69 +703,68 @@ public class MinesweeperGUI extends JPanel {
         }
         updateTurnIndicatorUI();
     }
+    
+ // =========================
+ // Game Over (uses GameOverDialog)
+ // =========================
+ public void showGameOver(boolean success) {
+     if (uiClockTimer != null && uiClockTimer.isRunning()) uiClockTimer.stop();
 
-    // =========================
-    // Game Over (UPDATED: uses GameOverDialog)
-    // =========================
+     int livesBefore = session.getLives();
+     int minesRevealed = countRevealedMines(board1) + countRevealedMines(board2);
+     int durationSeconds = (controller == null) ? 0 : (int) (controller.getElapsedActiveMillis() / 1000);
 
-    public void showGameOver(boolean success) {
-        if (uiClockTimer != null && uiClockTimer.isRunning()) uiClockTimer.stop();
+     // convert lives -> score AFTER saving livesBefore
+     session.convertRemainingLivesToScoreAtEnd();
 
-        int livesBefore = session.getLives();
-        int minesRevealed = countRevealedMines(board1) + countRevealedMines(board2);
-        int durationSeconds = (controller == null) ? 0 : (int) (controller.getElapsedActiveMillis() / 1000);
+     board1.revealAllCells();
+     board2.revealAllCells();
+     refreshView();
+     setAllBoardsEnabled(false);
 
-        // convert lives -> score AFTER saving livesBefore
-        session.convertRemainingLivesToScoreAtEnd();
+     String resultLabel = success ? "VICTORY" : "GAME OVER";
+     String resultSub   = success ? "All mines revealed!" : "Out of shared lives!";
+     String difficultyText = session.getDifficulty().name();
 
-        board1.revealAllCells();
-        board2.revealAllCells();
-        refreshView();
-        setAllBoardsEnabled(false);
+     // Save history
+     GameHistory history = new GameHistory();
+     history.addEntry(
+             player1Name + " & " + player2Name,
+             session.getScore(),
+             difficultyText,
+             success ? "All mines revealed" : "Out of lives",
+             durationSeconds
+     );
 
-        String resultLabel = success ? "VICTORY" : "GAME OVER";
-        String resultSub   = success ? "All mines revealed!" : "Out of shared lives!";
-        String difficultyText = session.getDifficulty().name();
+     Window owner = SwingUtilities.getWindowAncestor(this);
+     GameOverDialog dialog = new GameOverDialog(
+             owner,
+             success,
+             resultLabel,
+             resultSub,
+             player1Name + " & " + player2Name,
+             session.getScore(),
+             livesBefore,
+             minesRevealed,
+             difficultyText,
+             durationSeconds,
+             () -> parent.startGame(player1Name, player2Name, session.getDifficulty()),
+             parent::showMainMenu
+     );
+     dialog.setVisible(true);
+ }
 
-        // Save history (optional: if your GameHistory is singleton/static, replace this)
-        GameHistory history = new GameHistory();
-        history.addEntry(
-                player1Name + " & " + player2Name,
-                session.getScore(),
-                difficultyText,
-                success ? "All mines revealed" : "Out of lives",
-                durationSeconds
-        );
+ private int countRevealedMines(Board board) {
+     int count = 0;
+     for (int r = 0; r < board.getRows(); r++) {
+         for (int c = 0; c < board.getCols(); c++) {
+             Cell cell = board.getCell(r, c);
+             if (cell.getType() == CellType.MINE && cell.isRevealed()) count++;
+         }
+     }
+     return count;
+ }
 
-        // Modern dialog (view/GameOverDialog.java must exist)
-        Window owner = SwingUtilities.getWindowAncestor(this);
-        GameOverDialog dialog = new GameOverDialog(
-                owner,
-                success,
-                resultLabel,
-                resultSub,
-                player1Name + " & " + player2Name,
-                session.getScore(),
-                livesBefore,
-                minesRevealed,
-                difficultyText,
-                durationSeconds,
-                () -> parent.startGame(player1Name, player2Name, session.getDifficulty()),
-                parent::showMainMenu
-        );
-        dialog.setVisible(true);
-    }
-
-    private int countRevealedMines(Board board) {
-        int count = 0;
-        for (int r = 0; r < board.getRows(); r++) {
-            for (int c = 0; c < board.getCols(); c++) {
-                Cell cell = board.getCell(r, c);
-                if (cell.getType() == CellType.MINE && cell.isRevealed()) count++;
-            }
-        }
-        return count;
-    }
 
     // =========================
     // Helpers / Components
@@ -952,45 +996,6 @@ public class MinesweeperGUI extends JPanel {
             box.add(resume);
 
             add(box);
-        }
-    }
-
-    private static class LegendIconChip extends JComponent {
-        private final String text;
-        private final Color bg;
-        private final Color fg;
-
-        LegendIconChip(String text, Color bg, Color fg) {
-            this.text = text;
-            this.bg = bg;
-            this.fg = fg;
-            setPreferredSize(new Dimension(46, 34));
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            int w = getWidth();
-            int h = getHeight();
-
-            g2.setColor(bg);
-            g2.fillRoundRect(0, 0, w, h, 12, 12);
-
-            g2.setColor(new Color(255, 255, 255, 90));
-            g2.drawRoundRect(0, 0, w - 1, h - 1, 12, 12);
-
-            g2.setColor(fg);
-            g2.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
-
-            FontMetrics fm = g2.getFontMetrics();
-            int tx = (w - fm.stringWidth(text)) / 2;
-            int ty = (h - fm.getHeight()) / 2 + fm.getAscent();
-
-            g2.drawString(text, tx, ty);
-            g2.dispose();
         }
     }
 
