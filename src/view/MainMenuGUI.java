@@ -100,40 +100,30 @@ public class MainMenuGUI extends JFrame {
         centerPanel.setOpaque(false);
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
 
-        // --- הוספת כפתור הגדרות (רק למסך הראשי) ---
-        // יצירת פאנל עליון לכפתור ההגדרות בתוך המסך הראשי
+        // כפתור הגדרות עליון
         JPanel settingsWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         settingsWrapper.setOpaque(false);
-        settingsWrapper.setMaximumSize(new Dimension(2000, 60)); // רוחב מקסימלי, גובה קטן
+        settingsWrapper.setMaximumSize(new Dimension(2000, 60));
         settingsWrapper.setBorder(new EmptyBorder(10, 0, 0, 10));
 
         JButton settingsBtn = createIconButton("⚙️");
         settingsBtn.setToolTipText("Settings");
         settingsBtn.addActionListener(e -> openSettingsPage());
-        
         settingsWrapper.add(settingsBtn);
         centerPanel.add(settingsWrapper);
-        // ------------------------------------------------
 
-        centerPanel.add(Box.createVerticalStrut(10)); // ריווח קטן אחרי הכפתור
+        centerPanel.add(Box.createVerticalStrut(10));
 
-        // 1. כותרת ראשית דינמית
+        // כותרת
         JLabel titleLabel = new JLabel("MINESWEEPER") {
             @Override
             public void paintComponent(Graphics g) {
-                // ⭐ עדכון צבע אוטומטי
                 Color themeColor = model.ThemeManager.getInstance().getTextColor();
-                if (!getForeground().equals(themeColor)) {
-                    setForeground(themeColor);
-                }
-
+                if (!getForeground().equals(themeColor)) setForeground(themeColor);
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-                // צל עדין (תמיד שחור שקוף)
                 g2.setColor(new Color(0, 0, 0, 50));
                 g2.drawString(getText(), 4, getHeight() - 4);
-
                 super.paintComponent(g);
             }
         };
@@ -141,17 +131,12 @@ public class MainMenuGUI extends JFrame {
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(titleLabel);
 
-        // 2. תת-כותרת דינמית
         JLabel subTitleLabel = new JLabel("By Jellyfish Team ") {
             @Override
             public void paintComponent(Graphics g) {
-                // ⭐ עדכון צבע
                 Color themeColor = model.ThemeManager.getInstance().getTextColor();
                 Color subColor = model.ThemeManager.getInstance().isDarkMode() ? new Color(135, 206, 250) : new Color(50, 50, 150);
-                
-                if (!getForeground().equals(subColor)) {
-                    setForeground(subColor);
-                }
+                if (!getForeground().equals(subColor)) setForeground(subColor);
                 super.paintComponent(g);
             }
         };
@@ -161,7 +146,9 @@ public class MainMenuGUI extends JFrame {
 
         centerPanel.add(Box.createVerticalStrut(60));
 
-        // 3. כפתורים
+        // === הכפתורים ===
+
+        // 1. Start Game
         JButton startGameBtn = createStyledButton("Start Game");
         startGameBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         startGameBtn.addActionListener(e -> showSetupScreen());
@@ -169,6 +156,16 @@ public class MainMenuGUI extends JFrame {
 
         centerPanel.add(Box.createVerticalStrut(20));
 
+        // ⭐ 2. Top Scores (הכפתור החדש!)
+        JButton scoresBtn = createStyledButton("Top Scores 🏆");
+        scoresBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // false = הגענו מהתפריט הראשי
+        scoresBtn.addActionListener(e -> showHistoryPanel(false)); 
+        centerPanel.add(scoresBtn);
+
+        centerPanel.add(Box.createVerticalStrut(20));
+
+        // 3. Admin Login
         JButton adminBtn = createStyledButton("Admin Login");
         adminBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         adminBtn.addActionListener(e -> showAdminLogin());
@@ -195,6 +192,7 @@ public class MainMenuGUI extends JFrame {
         centerLayout.show(centerContainer, "ADMIN_DASH");
     }
 
+   
     private JPanel buildAdminDashboardPanel() {
         JPanel panel = new JPanel();
         panel.setOpaque(false);
@@ -211,17 +209,16 @@ public class MainMenuGUI extends JFrame {
 
         JButton manageQuestionsBtn = createStyledButton("Manage Questions");
         manageQuestionsBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        // --- השינוי כאן: הוספת פעולה לכפתור שפותחת את אשף השאלות ---
         manageQuestionsBtn.addActionListener(e -> showQuestionWizard());
-        
         panel.add(manageQuestionsBtn);
 
         panel.add(Box.createVerticalStrut(20));
 
         JButton historyBtn = createStyledButton("Game History");
         historyBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        historyBtn.addActionListener(e -> showHistoryPanel());        panel.add(historyBtn);
+        // ⭐ שינוי: שולחים true כי אנחנו באדמין
+        historyBtn.addActionListener(e -> showHistoryPanel(true));        
+        panel.add(historyBtn);
 
         panel.add(Box.createVerticalStrut(40));
 
@@ -248,9 +245,11 @@ public class MainMenuGUI extends JFrame {
     }
     /**
      * מעבר למסך היסטוריית המשחקים.
+     * @param isAdmin האם הכניסה היא דרך האדמין (משפיע על כפתור החזרה)
      */
-    public void showHistoryPanel() {
-        HistoryPanel historyPanel = new HistoryPanel(this);
+    public void showHistoryPanel(boolean isAdmin) {
+        // שולחים את הפרמטר isAdmin לבנאי החדש
+        HistoryPanel historyPanel = new HistoryPanel(this, isAdmin);
         centerContainer.add(historyPanel, "HISTORY");
         centerLayout.show(centerContainer, "HISTORY");
     }
