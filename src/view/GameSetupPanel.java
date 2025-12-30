@@ -16,8 +16,8 @@ public class GameSetupPanel extends JPanel {
     private final JTextField player2Field = new JTextField();
     private final JComboBox<Difficulty> difficultyBox = new JComboBox<>(Difficulty.values());
 
-    private final JButton nextBtn = new JButton("Next");
-    private final JButton backBtn = new JButton("Back");
+    private  JButton nextBtn = new JButton("Next");
+    private  JButton backBtn = new JButton("Back");
 
     private final MainMenuGUI parent;
 
@@ -32,7 +32,8 @@ public class GameSetupPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
 
         // Card (rounded + shadow)
-        RoundedCardPanel card = new RoundedCardPanel();
+        JPanel card = new JPanel();
+        card.setOpaque(false); 
         card.setLayout(new GridBagLayout());
         card.setBorder(BorderFactory.createEmptyBorder(26, 30, 24, 30));
 
@@ -103,10 +104,12 @@ public class GameSetupPanel extends JPanel {
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 0));
         buttons.setOpaque(false);
+        
+        backBtn = createStyledButton("Back");
+        nextBtn = createStyledButton("Next");
 
-        styleSecondaryButton(backBtn);
-        stylePrimaryButton(nextBtn);
-        setPrimaryEnabled(nextBtn, false);
+        nextBtn.setEnabled(false);
+        nextBtn.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
 
         buttons.add(backBtn);
         buttons.add(nextBtn);
@@ -309,18 +312,12 @@ public class GameSetupPanel extends JPanel {
 
     private void setPrimaryEnabled(JButton btn, boolean enabled) {
         btn.setEnabled(enabled);
-
         if (enabled) {
-            btn.setBackground(new Color(60, 120, 200));
+            btn.setBorder(BorderFactory.createLineBorder(Color.CYAN, 2));
             btn.setForeground(Color.WHITE);
-            btn.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(255, 255, 255, 70), 1, true),
-                    BorderFactory.createEmptyBorder(10, 26, 10, 26)
-            ));
         } else {
-            btn.setBackground(new Color(60, 80, 105));
-            btn.setForeground(new Color(190, 200, 215));
-            btn.setBorder(BorderFactory.createEmptyBorder(10, 26, 10, 26));
+            btn.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
+            btn.setForeground(Color.GRAY);
         }
     }
 
@@ -334,39 +331,7 @@ public class GameSetupPanel extends JPanel {
 
         @Override
         protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            int w = getWidth();
-            int h = getHeight();
-
-            // 1. קבלת מצב העיצוב (כהה או בהיר)
-            boolean isDark = ThemeManager.getInstance().isDarkMode();
-
-            // 2. קביעת צבע הרקע והצל לפי המצב
-            Color shadowColor = isDark ? new Color(0, 0, 0, 120) : new Color(100, 100, 100, 50);
-            
-            // אם כהה -> כחול כהה שקוף, אם בהיר -> לבן שקוף
-            Color cardColor = isDark ? new Color(10, 20, 35, 220) : new Color(255, 255, 255, 230);
-            
-            // אם כהה -> מסגרת לבנה עדינה, אם בהיר -> מסגרת אפורה עדינה
-            Color borderColor = isDark ? new Color(255, 255, 255, 70) : new Color(0, 0, 0, 50);
-
-            // ציור הצל
-            g2.setColor(shadowColor);
-            g2.fillRoundRect(10, 12, w - 20, h - 18, 24, 24);
-
-            // ציור הכרטיס עצמו
-            g2.setColor(cardColor);
-            g2.fillRoundRect(6, 6, w - 12, h - 12, 22, 22);
-
-            // ציור המסגרת
-            g2.setColor(borderColor);
-            g2.setStroke(new BasicStroke(2f));
-            g2.drawRoundRect(6, 6, w - 12, h - 12, 22, 22);
-
-            g2.dispose();
-            // super.paintComponent(g); // לא חובה כאן כי ציירנו הכל ידנית
+            // خليناها فاضية عشان ما ترسم ولا اشي (شفافة بالكامل)
         }
     }
 
@@ -409,5 +374,44 @@ public class GameSetupPanel extends JPanel {
 
             g2.dispose();
         }
+    }
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(getBackground());
+                g.fillRect(0, 0, getWidth(), getHeight());
+                super.paintComponent(g);
+            }
+        };
+
+        button.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        button.setForeground(Color.WHITE);
+        button.setBackground(new Color(0, 0, 0, 150));
+        
+        button.setFocusPainted(false);
+        button.setContentAreaFilled(false);
+        button.setOpaque(false); 
+        
+        button.setPreferredSize(new Dimension(140, 45));
+        
+        button.setBorder(BorderFactory.createLineBorder(new Color(100, 200, 255), 2));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) {
+                    button.setBackground(new Color(100, 200, 255)); // يصير سماوي
+                    button.setForeground(Color.BLACK);
+                }
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) {
+                    button.setBackground(new Color(0, 0, 0, 150)); // يرجع أسود شفاف
+                    button.setForeground(Color.WHITE);
+                }
+            }
+        });
+        return button;
     }
 }
