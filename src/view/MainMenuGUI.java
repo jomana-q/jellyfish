@@ -390,37 +390,46 @@ public class MainMenuGUI extends JFrame {
     }
     
     private JButton createIconButton(String icon) {
-        JButton btn = new JButton(icon) {
-            // ⭐ תיקון: עדכון צבע דינמי גם לאייקונים
+        JButton btn = new JButton("") {
+        	
             @Override
             protected void paintComponent(Graphics g) {
-            	Color themeColor = ThemeManager.getInstance().getTextColor();                if (!getForeground().equals(themeColor)) {
-                    setForeground(themeColor);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                Color themeColor = ThemeManager.getInstance().getTextColor();
+                Color crystalGlow = new Color(0, 240, 255); // سماوي
+
+                if (getModel().isRollover()) {
+                    g2.setColor(crystalGlow);
+                } else {
+                    g2.setColor(themeColor);
                 }
-                super.paintComponent(g);
+
+                g2.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 32)); 
+                
+                FontMetrics fm = g2.getFontMetrics();
+                int textWidth = fm.stringWidth(icon);
+                int textHeight = fm.getAscent();
+                
+                int x = (getWidth() - textWidth) / 2;
+                int y = (getHeight() + textHeight) / 2 - 6; 
+
+                g2.drawString(icon, x, y);
             }
         };
-        
-        btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
-        // btn.setForeground(Color.WHITE); // ❌ נמחק
+
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        btn.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent evt) {
-                btn.setForeground(Color.CYAN); // אפקט תכלת במעבר עכבר
-            }
-            public void mouseExited(MouseEvent evt) {
-                // כשהעכבר יוצא, נחזיר לצבע הת'ים
-                btn.setForeground(model.ThemeManager.getInstance().getTextColor());
-            }
-        });
-
+        
+        btn.setPreferredSize(new Dimension(80, 60)); 
+        btn.setMaximumSize(new Dimension(80, 60)); 
+        
         return btn;
     }
-
+    
     // --- Placeholder Navigation ---
 
     /** פתיחת מסך ההגדרות (Settings) */
