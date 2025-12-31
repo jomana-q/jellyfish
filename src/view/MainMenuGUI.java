@@ -432,7 +432,7 @@ public class MainMenuGUI extends JFrame {
     // --- Placeholder Navigation ---
 
     /** פתיחת מסך ההגדרות (Settings) */
-    private void openSettingsPage() {
+    public void openSettingsPage() {
         if (settingsPanel == null) {
             settingsPanel = new SettingsPanel(this);
             centerContainer.add(settingsPanel, "SETTINGS");

@@ -418,13 +418,13 @@ public class MinesweeperGUI extends JPanel {
         msgCard.add(centerRow, BorderLayout.CENTER);
         overlayMessageCard.add(msgCard);
 
+     // יצירת פאנל ההפסקה החדש ללא כפתור הגדרות ועם מבנה מצומצם
         overlayPauseCard = new PauseMenuPanel(
                 this::togglePauseFromGUI,
                 () -> parent.startGame(player1Name, player2Name, session.getDifficulty()),
-                parent::showMainMenu,
-                () -> JOptionPane.showMessageDialog(this, "Settings")
+                parent::showMainMenu
         );
-
+        
         overlayRoot.add(overlayMessageCard, "MSG");
         overlayRoot.add(overlayPauseCard, "PAUSE");
     }
@@ -960,45 +960,115 @@ public class MinesweeperGUI extends JPanel {
     }
 
     private static class PauseMenuPanel extends JPanel {
-        PauseMenuPanel(Runnable onResume, Runnable onRestart, Runnable onMenu, Runnable onSettings) {
+        PauseMenuPanel(Runnable onResume, Runnable onRestart, Runnable onMenu) {
             setOpaque(false);
             setLayout(new GridBagLayout());
 
-            JPanel box = new JPanel();
-            box.setPreferredSize(new Dimension(520, 300));
-            box.setBackground(new Color(216, 162, 76));
-            box.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            // בדיקת המצב הנוכחי מה-ThemeManager
+            boolean isDark = ThemeManager.getInstance().isDarkMode();
+            
+            // צבעים מותאמים אישית למראה זכוכית
+            Color boxBg = isDark ? new Color(15, 30, 50, 245) : new Color(255, 255, 255, 235);
+            Color accentColor = isDark ? new Color(100, 200, 255) : new Color(40, 100, 180);
+            Color borderColor = isDark ? new Color(255, 255, 255, 50) : new Color(0, 0, 0, 30);
+
+            // יצירת הכרטיס המרכזי - גודל מינימלי (350x175)
+            JPanel box = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setColor(boxBg);
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+                    g2.setColor(borderColor);
+                    g2.setStroke(new BasicStroke(2f));
+                    g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 30, 30);
+                    g2.dispose();
+                }
+            };
+            
+         // --- משתני שליטה על גדלים ---
+            int boxWidth = 360;      // רוחב המלבן הכללי
+            int boxHeight = 170;     // גובה המלבן הכללי
+            int resumeBtnW = 300;    // רוחב כפתור ה-RESUME
+            int resumeBtnH = 40;     // גובה כפתור ה-RESUME
+            
+            // משתנים חדשים לכפתורי האמצע (Restart & Menu)
+            int midBtnW = 150;       // רוחב כפתורי האמצע
+            int midBtnH = 34;        // גובה כפתורי האמצע
+            
+            int emojiFontSize = 18;  // גודל הגופן והאימוג'י
+            
+            box.setPreferredSize(new Dimension(boxWidth, boxHeight)); 
+            box.setOpaque(false);
             box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
-
-            JLabel paused = new JLabel("PAUSED", SwingConstants.CENTER);
+            // הגדרת מרווח פנימי קבוע (Top, Left, Bottom, Right)
+            box.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+            // כותרת עם אימוג'י
+            JLabel paused = new JLabel("PAUSED ⏸️", SwingConstants.CENTER);
             paused.setAlignmentX(Component.CENTER_ALIGNMENT);
-            paused.setFont(new Font("Segoe UI", Font.BOLD, 44));
-            paused.setForeground(new Color(255, 80, 60));
-
-            JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-            JButton restart = new JButton("Restart");
-            JButton menu = new JButton("Menu");
-            JButton settings = new JButton("Settings");
+            paused.setFont(new Font("Segoe UI Emoji", Font.BOLD, emojiFontSize + 4));
+            paused.setForeground(accentColor);
+            
+            // הוספת מרווח ריק (Padding) מעל ומתחת לטקסט כדי למנוע חיתוך של האימוג'י
+            paused.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+            // פאנל כפתורי אמצע קטנים יותר
+            JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+            row.setOpaque(false);
+            
+         // יצירת הכפתורים תוך שימוש במשתני הגודל החדשים
+            JButton restart = createCompactBtn("Restart 🔄", isDark, emojiFontSize - 4, midBtnW, midBtnH);
+            JButton menu = createCompactBtn("Menu 🏠", isDark, emojiFontSize - 4, midBtnW, midBtnH);
+            
             restart.addActionListener(e -> onRestart.run());
             menu.addActionListener(e -> onMenu.run());
-            settings.addActionListener(e -> onSettings.run());
-            row.add(restart); row.add(menu); row.add(settings);
+            
+            row.add(restart); 
+            row.add(menu);
 
-            JButton resume = new JButton("RESUME");
+            // כפתור המשך גדול ובולט
+            JButton resume = new JButton("RESUME ▶️");
             resume.setAlignmentX(Component.CENTER_ALIGNMENT);
-            resume.setFont(new Font("Segoe UI", Font.BOLD, 30));
-            resume.addActionListener(e -> onResume.run());
+            resume.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20)); // פונט גדול וברור
+            resume.setForeground(Color.WHITE);
+            resume.setBackground(new Color(40, 160, 80)); // ירוק כהה ועמוק
+            resume.setFocusPainted(false);
+            resume.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            // הגדלת הכפתור התחתון לרוחב כמעט מלא
+         // שימוש במשתנים שהגדרנו למעלה כדי לשלוט בגודל הכפתור
+            resume.setMaximumSize(new Dimension(resumeBtnW, resumeBtnH));            resume.addActionListener(e -> onResume.run());
 
+            // הוספת הרכיבים עם רווחים אפסיים
             box.add(paused);
-            box.add(Box.createVerticalStrut(16));
+            box.add(Box.createVerticalStrut(5));
             box.add(row);
-            box.add(Box.createVerticalStrut(16));
+            box.add(Box.createVerticalStrut(8));
             box.add(resume);
 
             add(box);
         }
+     // פונקציה ליצירת כפתור קומפקטי עם שליטה על גודל וגופן
+        private JButton createCompactBtn(String text, boolean isDark, int fontSize, int w, int h) {
+            JButton b = new JButton(text);
+            // הגדרת פונט תומך אימוג'י
+            b.setFont(new Font("Segoe UI Emoji", Font.BOLD, fontSize)); 
+            b.setForeground(isDark ? Color.WHITE : Color.BLACK);
+            b.setContentAreaFilled(false);
+            b.setFocusPainted(false);
+            b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            
+            // קביעת הגודל המדויק לפי המשתנים שהגדרנו
+            b.setPreferredSize(new Dimension(w, h)); 
+            
+            b.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(isDark ? new Color(255,255,255,60) : new Color(0,0,0,40), 1, true),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0) // הסרת מרווחים פנימיים מיותרים
+            ));
+            return b;
+        }
+        
     }
-
+    
     private static class LivesHeartsPanel extends JComponent {
         private int lives = MAX_LIVES_DISPLAY;
         private final int maxLives;
