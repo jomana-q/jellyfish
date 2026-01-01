@@ -9,12 +9,12 @@ import java.awt.event.*;
 
 public class QuestionDialog {
 
-    // ========= size & time =========
+    // size & time
     private static final int CARD_W = 660;
     private static final int CARD_H = 440;
     private static final int TOTAL_SECONDS = 20;
 
-    // ========= theme (blue glass) =========
+    // theme (blue glass)
     private static final Color CARD_BG     = new Color(225, 242, 255, 235);
     private static final Color CARD_BORDER = new Color(90, 155, 220, 170);
 
@@ -35,12 +35,19 @@ public class QuestionDialog {
     // overlay
     private static final Color OVERLAY_DARK = new Color(0, 0, 0, 155);
 
-    // ========= fonts (FIX: avoid "Semibold" to prevent fallback spacing) =========
+    // fonts 
     private static final Font FONT_TITLE    = new Font("Segoe UI", Font.BOLD, 24);
     private static final Font FONT_QUESTION = new Font("Segoe UI", Font.BOLD, 20);
     private static final Font FONT_ANS      = new Font("Segoe UI", Font.PLAIN, 15);
     private static final Font FONT_BADGE    = new Font("Segoe UI", Font.BOLD, 14);
     private static final Font FONT_SMALL    = new Font("Segoe UI", Font.BOLD, 14);
+    
+    // result colors (correct/incorrect)
+    private static final Color CORRECT_BG     = new Color(210, 255, 220, 245);
+    private static final Color CORRECT_BORDER = new Color(60, 180, 95, 220);
+    private static final Color WRONG_BG       = new Color(255, 220, 220, 245);
+    private static final Color WRONG_BORDER   = new Color(215, 70, 70, 220);
+
 
     public static boolean showQuestionDialog(Component parent, Question q) {
         Window owner = SwingUtilities.getWindowAncestor(parent);
@@ -212,22 +219,46 @@ public class QuestionDialog {
             if (answered[0]) return;
             answered[0] = true;
 
+            // stop timer so user sees the result
+            if (t.isRunning()) t.stop();
+
             btnA.setEnabled(false);
             btnB.setEnabled(false);
             btnC.setEnabled(false);
             btnD.setEnabled(false);
 
-            int idx = -1;
+            AnswerCard[] cards = { btnA, btnB, btnC, btnD };
+
+            int chosenIdx = -1;
             Object src = ae.getSource();
-            if (src == btnA) idx = 0;
-            if (src == btnB) idx = 1;
-            if (src == btnC) idx = 2;
-            if (src == btnD) idx = 3;
+            if (src == btnA) chosenIdx = 0;
+            if (src == btnB) chosenIdx = 1;
+            if (src == btnC) chosenIdx = 2;
+            if (src == btnD) chosenIdx = 3;
 
-            if (src instanceof AnswerCard) ((AnswerCard) src).setChosen(true);
+            // always show the correct one in green
+            int correctIdx = -1;
+            for (int i = 0; i < 4; i++) {
+                if (q.isCorrect(i)) { correctIdx = i; break; }
+            }
+            if (correctIdx != -1) cards[correctIdx].markCorrect();
 
-            result[0] = (idx != -1) && q.isCorrect(idx);
-            dialog.dispose();
+            // mark chosen (green if correct, red if wrong)
+            if (chosenIdx != -1) {
+                cards[chosenIdx].setChosen(true);
+                if (!q.isCorrect(chosenIdx)) {
+                    cards[chosenIdx].markWrong();
+                } else {
+                    cards[chosenIdx].markCorrect();
+                }
+            }
+
+            result[0] = (chosenIdx != -1) && q.isCorrect(chosenIdx);
+
+            // keep dialog open briefly so colors are visible
+            Timer closeLater = new Timer(900, ev -> dialog.dispose());
+            closeLater.setRepeats(false);
+            closeLater.start();
         };
 
         btnA.addActionListener(pick);
@@ -487,6 +518,9 @@ public class QuestionDialog {
         private boolean down  = false;
         private boolean chosen = false;
 
+        private boolean showCorrect = false;
+        private boolean showWrong   = false;
+
         private final String badge;
         private final String text;
 
@@ -514,6 +548,25 @@ public class QuestionDialog {
             repaint();
         }
 
+        public void markCorrect() {
+            showCorrect = true;
+            showWrong = false;
+            repaint();
+        }
+
+        public void markWrong() {
+            showWrong = true;
+            showCorrect = false;
+            repaint();
+        }
+
+        public void clearMarks() {
+            showCorrect = false;
+            showWrong = false;
+            chosen = false;
+            repaint();
+        }
+
         @Override public Dimension getPreferredSize() {
             return new Dimension(250, 92);
         }
@@ -527,60 +580,95 @@ public class QuestionDialog {
             int h = getHeight();
             int arc = 16;
 
+            // background + border based on state
             Color bg = ANS_BG;
+            Color border = ANS_BORDER;
+            float strokeW = 2f;
+
             if (down) bg = ANS_BG_DOWN;
             else if (hover) bg = ANS_BG_HOVER;
-            if (chosen) bg = new Color(220, 242, 255, 245);
 
+            if (chosen) {
+                bg = new Color(220, 242, 255, 245);
+                border = new Color(70, 140, 210, 200);
+                strokeW = 3f;
+            }
+
+            // result overrides (highest priority)
+            if (showCorrect) {
+                bg = CORRECT_BG;
+                border = CORRECT_BORDER;
+                strokeW = 3.2f;
+            } else if (showWrong) {
+                bg = WRONG_BG;
+                border = WRONG_BORDER;
+                strokeW = 3.2f;
+            }
+
+            // shadow
             g2.setColor(new Color(0, 0, 0, 30));
             g2.fillRoundRect(6, 8, w - 12, h - 12, arc, arc);
 
+            // card
             g2.setColor(bg);
             g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
 
-            g2.setColor(chosen ? new Color(70, 140, 210, 200) : ANS_BORDER);
-            understandingStroke(g2, chosen ? 3f : 2f);
+            g2.setColor(border);
+            understandingStroke(g2, strokeW);
             g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
 
+            // badge
             int r = 30;
             int bx = 16;
             int by = (h - r) / 2;
 
-            g2.setColor(BADGE_BG);
+            Color badgeBg = BADGE_BG;
+            Color badgeTxt = BADGE_TXT;
+            Color badgeBorder = new Color(120, 175, 230, 150);
+
+            if (showCorrect) {
+                badgeBg = new Color(200, 255, 210, 255);
+                badgeTxt = new Color(25, 120, 55);
+                badgeBorder = CORRECT_BORDER;
+            } else if (showWrong) {
+                badgeBg = new Color(255, 210, 210, 255);
+                badgeTxt = new Color(150, 35, 35);
+                badgeBorder = WRONG_BORDER;
+            }
+
+            g2.setColor(badgeBg);
             g2.fillOval(bx, by, r, r);
-            g2.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+            g2.setColor(badgeBorder);
             understandingStroke(g2, 2f);
             g2.drawOval(bx, by, r, r);
 
-            g2.setColor(BADGE_TXT);
+            g2.setColor(badgeTxt);
             g2.setFont(FONT_BADGE);
             FontMetrics fmB = g2.getFontMetrics();
             int tx = bx + (r - fmB.stringWidth(badge)) / 2;
             int ty = by + (r - fmB.getHeight()) / 2 + fmB.getAscent();
             g2.drawString(badge, tx, ty);
 
+            // text
             g2.setColor(QUESTION_TXT);
             g2.setFont(FONT_ANS);
             FontMetrics fm = g2.getFontMetrics();
 
             String raw = (text == null) ? "" : text;
 
-            // קצת יותר מקום לטקסט
             int textX = bx + r + 16;
             int maxW  = w - textX - 18;
 
-            // שתי שורות
             String[] lines = wrapTwoLines(raw, fm, maxW);
             String l1 = lines[0];
             String l2 = lines[1];
 
-            // אם אין שורה 2 בכלל – מציירים באמצע כמו קודם
             if (l2 == null || l2.isEmpty()) {
                 l1 = cutToWidth(l1, fm, maxW);
                 int textY = (h - fm.getHeight()) / 2 + fm.getAscent();
                 g2.drawString(l1, textX, textY);
             } else {
-                // מציירים 2 שורות עם ריווח יפה
                 int lineH = fm.getHeight();
                 int totalH = lineH * 2 - 2;
                 int startY = (h - totalH) / 2 + fm.getAscent();
