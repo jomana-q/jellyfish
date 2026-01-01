@@ -117,7 +117,7 @@ public class MinesweeperController {
             int payDeltaScore = scoreAfterPay - scoreBeforePay;
             int payDeltaLives = livesAfterPay - livesBeforePay; // usually 0
 
-            // SURPRISE
+         // SURPRISE
             if (cell.getType() == CellType.SURPRISE) {
                 boolean good = Math.random() < 0.5;
 
@@ -127,14 +127,14 @@ public class MinesweeperController {
                 int outcomeDeltaScore = session.getScore() - scoreAfterPay;
                 int outcomeDeltaLives = session.getLives() - livesAfterPay;
 
-                view.refreshView();
-                view.showResultOverlay(
+                view.playGiftCenterAndShowOverlay(
                         good ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
                         good ? "GOOD SURPRISE!" : "BAD SURPRISE!",
                         formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, null),
-                        OVERLAY_SECONDS
+                        OVERLAY_SECONDS,
+                        this::endTurn   // ✅ endTurn runs ONLY after animation finishes
                 );
-                endTurn();
+
                 return;
             }
 
