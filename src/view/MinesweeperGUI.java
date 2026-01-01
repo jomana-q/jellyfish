@@ -41,6 +41,12 @@ public class MinesweeperGUI extends JPanel {
 	private static final Color OVERLAY_BLUE_BORDER = new Color(70, 140, 210, 180);
 
 	public enum OverlayType { GOOD, BAD, INFO }
+	
+	// Overlay font sizing
+	private static final int OVERLAY_TITLE_MAX = 24;   
+	private static final int OVERLAY_TITLE_MIN = 16;
+	private static final int OVERLAY_TITLE_WIDTH = 340;
+	private static final int OVERLAY_SUB_SIZE = 15;    
 
 	// Game fields
 	private final Board board1;
@@ -160,15 +166,16 @@ public class MinesweeperGUI extends JPanel {
 
 	// Overlay API
 	public void showResultOverlay(OverlayType type, String title, String subtitle, int seconds) {
-		overlayTitle.setFont(new Font("Segoe UI", Font.BOLD, 30));
-
 		if (overlayRoot == null) return;
 
 		String safeTitle = (title == null) ? "" : title.trim();
 		String safeSub   = (subtitle == null) ? "" : subtitle.trim();
 
 		overlayTitle.setText(safeTitle);
+		fitOverlayTitleToWidth(safeTitle, OVERLAY_TITLE_WIDTH, OVERLAY_TITLE_MAX, OVERLAY_TITLE_MIN);
+
 		overlaySub.setText(safeSub.replace(" | ", "\n"));
+		overlaySub.setFont(new Font("Segoe UI", Font.PLAIN, OVERLAY_SUB_SIZE));
 
 		if (overlayUsingQuestionTheme) {
 		    overlayTitle.setForeground(new Color(18, 55, 105));   // Blue (Question)
@@ -490,13 +497,13 @@ public class MinesweeperGUI extends JPanel {
 
 		overlayTitle = new JLabel("", SwingConstants.CENTER);
 		overlayTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-		overlayTitle.setFont(new Font("Segoe UI", Font.BOLD, 30));
+		overlayTitle.setFont(new Font("Segoe UI", Font.BOLD, OVERLAY_TITLE_MAX));
 
 		overlayTitle.setOpaque(false);
 
 		//Subtitle as JTextPane with real center alignment
 		overlaySub = new JTextPane();
-		overlaySub.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+		overlaySub.setFont(new Font("Segoe UI", Font.PLAIN, OVERLAY_SUB_SIZE));
 		overlaySub.setEditable(false);
 		overlaySub.setFocusable(false);
 		overlaySub.setOpaque(false);
@@ -653,7 +660,10 @@ public class MinesweeperGUI extends JPanel {
 		if (overlayRoot == null) return;
 
 		overlayTitle.setText((title == null) ? "" : title.trim());
+		fitOverlayTitleToWidth(overlayTitle.getText(), OVERLAY_TITLE_WIDTH, OVERLAY_TITLE_MAX, OVERLAY_TITLE_MIN);
+
 		overlaySub.setText(((subtitle == null) ? "" : subtitle.trim()).replace(" | ", "\n"));
+		overlaySub.setFont(new Font("Segoe UI", Font.PLAIN, OVERLAY_SUB_SIZE));
 
 		// keep center alignment
 		javax.swing.text.SimpleAttributeSet center = new javax.swing.text.SimpleAttributeSet();
