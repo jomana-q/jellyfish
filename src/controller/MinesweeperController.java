@@ -81,16 +81,15 @@ public class MinesweeperController {
         // activate question/surprise
         if (board.canActivateSpecial(row, col)) {
 
-            if (!session.canPayForPower()) {
-                view.showResultOverlay(
-                        MinesweeperGUI.OverlayType.INFO,
-                        "NOT ENOUGH SCORE",
-                        "Need " + session.getDifficulty().getPowerCost() + " pts to activate",
-                        OVERLAY_SECONDS
-                );
-                view.refreshView();
-                return;
-            }
+        	if (!session.canPayForPower()) {
+        	    boolean isQuestionTile = (cell.getType() == CellType.QUESTION);
+        	    int cost = session.getDifficulty().getPowerCost();
+        	    int current = session.getScore();
+
+        	    view.showNotEnoughPointsOverlay(isQuestionTile, cost, current);
+        	    view.refreshView();
+        	    return;
+        	}
 
             // Question bank empty?
             if (cell.getType() == CellType.QUESTION) {
@@ -157,12 +156,12 @@ public class MinesweeperController {
                 int outcomeDeltaLives = session.getLives() - livesAfterPay;
 
                 view.refreshView();
-                view.showResultOverlay(
-                        correct ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
-                        correct ? "CORRECT ANSWER!" : "WRONG ANSWER!",
-                        formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, bonus),
-                        OVERLAY_SECONDS
-                );
+                view.showQuestionResultOverlay(
+                	    correct ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
+                	    correct ? "CORRECT ANSWER!" : "WRONG ANSWER!",
+                	    formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, bonus),
+                	    OVERLAY_SECONDS
+                	);
                 endTurn();
                 return;
             }
