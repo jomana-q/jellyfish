@@ -29,6 +29,16 @@ public class MinesweeperGUI extends JPanel {
 	private OverlayIcon overlayIcon;
 
 	private Timer overlayAutoHideTimer;
+	// Overlay theme state (used for Question result overlay)
+	private boolean overlayUsingQuestionTheme = false;
+
+	// Default (Surprise / pink) theme
+	private static final Color OVERLAY_PINK_BG     = new Color(255, 220, 240, 245);
+	private static final Color OVERLAY_PINK_BORDER = new Color(150, 70, 170, 180);
+
+	// Question (blue) theme
+	private static final Color OVERLAY_BLUE_BG     = new Color(220, 240, 255, 245);
+	private static final Color OVERLAY_BLUE_BORDER = new Color(70, 140, 210, 180);
 
 	public enum OverlayType { GOOD, BAD, INFO }
 
@@ -73,6 +83,9 @@ public class MinesweeperGUI extends JPanel {
 	// Overlay emoji icons (loaded from /images/)
 	private final ImageIcon ICON_GOOD_HEART = loadIcon("/images/heart_good.png");
 	private final ImageIcon ICON_BAD_HEART  = loadIcon("/images/heart_bad.png");
+	// Question result emoji icons (blue)
+	private final ImageIcon ICON_BLUE_GOOD = loadIcon("/images/blue_good.png");
+	private final ImageIcon ICON_BLUE_BAD  = loadIcon("/images/blue_bad.png");
 
 	// clock refresh
 	private Timer uiClockTimer;
@@ -112,66 +125,103 @@ public class MinesweeperGUI extends JPanel {
 	}
 	//helper: scale any ImageIcon to fixed size
 	private ImageIcon scaledIcon(ImageIcon src, int w, int h) {
-	    if (src == null || src.getImage() == null) return src;
-	    Image img = src.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
-	    return new ImageIcon(img);
+		if (src == null || src.getImage() == null) return src;
+		Image img = src.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
+		return new ImageIcon(img);
+	}
+	
+	private void fitOverlayTitleToWidth(String text, int maxWidth, int maxSize, int minSize) {
+	    if (overlayTitle == null) return;
+
+	    int size = maxSize;
+	    while (size >= minSize) {
+	        Font f = new Font("Segoe UI", Font.BOLD, size);
+	        FontMetrics fm = overlayTitle.getFontMetrics(f);
+	        if (fm.stringWidth(text) <= maxWidth) {
+	            overlayTitle.setFont(f);
+	            return;
+	        }
+	        size--;
+	    }
+	    overlayTitle.setFont(new Font("Segoe UI", Font.BOLD, minSize));
 	}
 
 	//helper: compute a good center-gift size based on overlay size
 	private int computeCenterGiftSize() {
-	    int w = (overlayRoot != null) ? overlayRoot.getWidth() : 0;
-	    int h = (overlayRoot != null) ? overlayRoot.getHeight() : 0;
+		int w = (overlayRoot != null) ? overlayRoot.getWidth() : 0;
+		int h = (overlayRoot != null) ? overlayRoot.getHeight() : 0;
 
-	    if (w <= 0 || h <= 0) return 260; // fallback
+		if (w <= 0 || h <= 0) return 260; // fallback
 
-	    int base = Math.min(w, h);
-	    int size = (int) (base * 0.45);   // 45% מהמסך
-	    return Math.max(180, Math.min(size, 420)); // clamp
+		int base = Math.min(w, h);
+		int size = (int) (base * 0.45);   // 45% מהמסך
+		return Math.max(180, Math.min(size, 420)); // clamp
 	}
 
 	// Overlay API
 	public void showResultOverlay(OverlayType type, String title, String subtitle, int seconds) {
-	    if (overlayRoot == null) return;
+		overlayTitle.setFont(new Font("Segoe UI", Font.BOLD, 30));
 
-	    String safeTitle = (title == null) ? "" : title.trim();
-	    String safeSub   = (subtitle == null) ? "" : subtitle.trim();
+		if (overlayRoot == null) return;
 
-	    overlayTitle.setText(safeTitle);
-	    overlaySub.setText(safeSub.replace(" | ", "\n"));
-	    
-	 // Keep center alignment after changing text
-	    javax.swing.text.SimpleAttributeSet center = new javax.swing.text.SimpleAttributeSet();
-	    javax.swing.text.StyleConstants.setAlignment(center, javax.swing.text.StyleConstants.ALIGN_CENTER);
-	    overlaySub.setParagraphAttributes(center, true);
+		String safeTitle = (title == null) ? "" : title.trim();
+		String safeSub   = (subtitle == null) ? "" : subtitle.trim();
 
-	    if (overlayEmoji != null) {
-	        overlayEmoji.setText(""); 
-	        int s = 140; // גודל האייקון
-	        if (type == OverlayType.GOOD) {
-	            overlayEmoji.setIcon(scaledIcon(ICON_GOOD_HEART, s, s));
-	        } else if (type == OverlayType.BAD) {
-	            overlayEmoji.setIcon(scaledIcon(ICON_BAD_HEART, s, s));
-	        } 
-	    }
+		overlayTitle.setText(safeTitle);
+		overlaySub.setText(safeSub.replace(" | ", "\n"));
 
-	    if (overlayCards != null && cardsHolder != null) {
-	        overlayCards.show(cardsHolder, "MSG");
-	        cardsHolder.setVisible(true);
-	    }
+		if (overlayUsingQuestionTheme) {
+		    overlayTitle.setForeground(new Color(18, 55, 105));   // Blue (Question)
+		} else {
+		    overlayTitle.setForeground(new Color(120, 45, 160));  // Purple (Surprise)
+		}
 
-	    overlayRoot.setVisible(true);
-	    overlayRoot.repaint();
+		// Keep center alignment
+		javax.swing.text.SimpleAttributeSet center = new javax.swing.text.SimpleAttributeSet();
+		javax.swing.text.StyleConstants.setAlignment(center, javax.swing.text.StyleConstants.ALIGN_CENTER);
+		overlaySub.setParagraphAttributes(center, true);
 
-	    if (overlayAutoHideTimer != null && overlayAutoHideTimer.isRunning()) {
-	        overlayAutoHideTimer.stop();
-	    }
-	    if (seconds > 0) {
-	        overlayAutoHideTimer = new Timer(seconds * 1000, e -> hideOverlayNow());
-	        overlayAutoHideTimer.setRepeats(false);
-	        overlayAutoHideTimer.start();
-	    }
+		// Apply theme BEFORE showing
+		if (overlayUsingQuestionTheme) {
+			OverlayCardPanel.setTheme(OVERLAY_BLUE_BG, OVERLAY_BLUE_BORDER);
+		} else {
+			OverlayCardPanel.setTheme(OVERLAY_PINK_BG, OVERLAY_PINK_BORDER);
+		}
+
+		// Pick icon based on theme + type
+		if (overlayEmoji != null) {
+			overlayEmoji.setText("");
+			int s = 140;
+
+			ImageIcon icon = null;
+			if (overlayUsingQuestionTheme) {
+				if (type == OverlayType.GOOD) icon = ICON_BLUE_GOOD;
+				else if (type == OverlayType.BAD) icon = ICON_BLUE_BAD;
+			} else {
+				if (type == OverlayType.GOOD) icon = ICON_GOOD_HEART;
+				else if (type == OverlayType.BAD) icon = ICON_BAD_HEART;
+			}
+
+			overlayEmoji.setIcon(icon == null ? null : scaledIcon(icon, s, s));
+		}
+
+		if (overlayCards != null && cardsHolder != null) {
+			overlayCards.show(cardsHolder, "MSG");
+			cardsHolder.setVisible(true);
+		}
+
+		overlayRoot.setVisible(true);
+		overlayRoot.repaint();
+
+		if (overlayAutoHideTimer != null && overlayAutoHideTimer.isRunning()) {
+			overlayAutoHideTimer.stop();
+		}
+		if (seconds > 0) {
+			overlayAutoHideTimer = new Timer(seconds * 1000, e -> hideOverlayNow());
+			overlayAutoHideTimer.setRepeats(false);
+			overlayAutoHideTimer.start();
+		}
 	}
-
 
 	public void showResultOverlay(String title, String subtitle, int seconds) {
 		OverlayStyle style = OverlayStyle.fromTitle(title);
@@ -202,6 +252,10 @@ public class MinesweeperGUI extends JPanel {
 	private void hideOverlayNow() {
 		if (overlayAutoHideTimer != null) overlayAutoHideTimer.stop();
 		if (overlayRoot == null) return;
+
+		overlayUsingQuestionTheme = false;
+		OverlayCardPanel.setTheme(OVERLAY_PINK_BG, OVERLAY_PINK_BORDER);
+
 		overlayRoot.setVisible(false);
 		overlayRoot.repaint();
 	}
@@ -385,115 +439,115 @@ public class MinesweeperGUI extends JPanel {
 
 	// Overlay creation
 	private void createOverlay() {
-	    overlayCards = new CardLayout();
+		overlayCards = new CardLayout();
 
-	    overlayRoot = new JPanel() {
-	        @Override
-	        protected void paintComponent(Graphics g) {
-	            super.paintComponent(g);
-	            Graphics2D g2 = (Graphics2D) g.create();
-	            g2.setColor(new Color(0, 0, 0, 140));
-	            g2.fillRect(0, 0, getWidth(), getHeight());
-	            g2.dispose();
-	        }
-	    };
-	    overlayRoot.setOpaque(false);
-	    overlayRoot.setVisible(false);
-	    overlayRoot.setLayout(new OverlayLayout(overlayRoot));
+		overlayRoot = new JPanel() {
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				Graphics2D g2 = (Graphics2D) g.create();
+				g2.setColor(new Color(0, 0, 0, 140));
+				g2.fillRect(0, 0, getWidth(), getHeight());
+				g2.dispose();
+			}
+		};
+		overlayRoot.setOpaque(false);
+		overlayRoot.setVisible(false);
+		overlayRoot.setLayout(new OverlayLayout(overlayRoot));
 
-	    // Cards holder
-	    cardsHolder = new JPanel(overlayCards);
-	    cardsHolder.setOpaque(false);
+		// Cards holder
+		cardsHolder = new JPanel(overlayCards);
+		cardsHolder.setOpaque(false);
 
-	    // Message card
-	    overlayMessageCard = new JPanel(new GridBagLayout());
-	    overlayMessageCard.setOpaque(false);
+		// Message card
+		overlayMessageCard = new JPanel(new GridBagLayout());
+		overlayMessageCard.setOpaque(false);
 
-	    OverlayCardPanel msgCard = new OverlayCardPanel();
-	    msgCard.setPreferredSize(new Dimension(380, 360));
-	    msgCard.setLayout(new BorderLayout());
-	    msgCard.setBorder(BorderFactory.createEmptyBorder(16, 18, 18, 18));
+		OverlayCardPanel msgCard = new OverlayCardPanel();
+		msgCard.setPreferredSize(new Dimension(380, 360));
+		msgCard.setLayout(new BorderLayout());
+		msgCard.setBorder(BorderFactory.createEmptyBorder(16, 18, 18, 18));
 
-	    overlayCloseBtn = new CloseIconButton();
-	    overlayCloseBtn.setToolTipText("Close");
-	    overlayCloseBtn.addActionListener(e -> hideOverlayNow());
+		overlayCloseBtn = new CloseIconButton();
+		overlayCloseBtn.setToolTipText("Close");
+		overlayCloseBtn.addActionListener(e -> hideOverlayNow());
 
-	    JPanel topRow = new JPanel(new BorderLayout());
-	    topRow.setOpaque(false);
-	    topRow.add(overlayCloseBtn, BorderLayout.EAST);
-	    msgCard.add(topRow, BorderLayout.NORTH);
+		JPanel topRow = new JPanel(new BorderLayout());
+		topRow.setOpaque(false);
+		topRow.add(overlayCloseBtn, BorderLayout.EAST);
+		msgCard.add(topRow, BorderLayout.NORTH);
 
-	    JPanel centerRow = new JPanel();
-	    centerRow.setOpaque(false);
-	    centerRow.setLayout(new BoxLayout(centerRow, BoxLayout.Y_AXIS));
-	    centerRow.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+		JPanel centerRow = new JPanel();
+		centerRow.setOpaque(false);
+		centerRow.setLayout(new BoxLayout(centerRow, BoxLayout.Y_AXIS));
+		centerRow.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-	    overlayEmoji = new JLabel("", SwingConstants.CENTER);
-	    overlayEmoji.setAlignmentX(Component.CENTER_ALIGNMENT);
-	    overlayEmoji.setPreferredSize(new Dimension(140, 140));
-	    overlayEmoji.setMaximumSize(new Dimension(140, 140));
-	    overlayEmoji.setOpaque(false);
+		overlayEmoji = new JLabel("", SwingConstants.CENTER);
+		overlayEmoji.setAlignmentX(Component.CENTER_ALIGNMENT);
+		overlayEmoji.setPreferredSize(new Dimension(140, 140));
+		overlayEmoji.setMaximumSize(new Dimension(140, 140));
+		overlayEmoji.setOpaque(false);
 
-	    overlayTitle = new JLabel("", SwingConstants.CENTER);
-	    overlayTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-	    overlayTitle.setFont(new Font("Segoe UI", Font.BOLD, 34));
+		overlayTitle = new JLabel("", SwingConstants.CENTER);
+		overlayTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+		overlayTitle.setFont(new Font("Segoe UI", Font.BOLD, 30));
 
-	    overlayTitle.setOpaque(false);
+		overlayTitle.setOpaque(false);
 
-	    //Subtitle as JTextPane with real center alignment
-	    overlaySub = new JTextPane();
-	    overlaySub.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-	    overlaySub.setEditable(false);
-	    overlaySub.setFocusable(false);
-	    overlaySub.setOpaque(false);
+		//Subtitle as JTextPane with real center alignment
+		overlaySub = new JTextPane();
+		overlaySub.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+		overlaySub.setEditable(false);
+		overlaySub.setFocusable(false);
+		overlaySub.setOpaque(false);
 
-	    //Center align text (only once!)
-	    javax.swing.text.SimpleAttributeSet center = new javax.swing.text.SimpleAttributeSet();
-	    javax.swing.text.StyleConstants.setAlignment(center, javax.swing.text.StyleConstants.ALIGN_CENTER);
-	    overlaySub.setParagraphAttributes(center, true);
+		//Center align text (only once!)
+		javax.swing.text.SimpleAttributeSet center = new javax.swing.text.SimpleAttributeSet();
+		javax.swing.text.StyleConstants.setAlignment(center, javax.swing.text.StyleConstants.ALIGN_CENTER);
+		overlaySub.setParagraphAttributes(center, true);
 
-	    overlaySub.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
-	    overlaySub.setMaximumSize(new Dimension(340, 90));
-	    overlaySub.setPreferredSize(new Dimension(340, 90));
+		overlaySub.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+		overlaySub.setMaximumSize(new Dimension(340, 110));
+		overlaySub.setPreferredSize(new Dimension(340, 110));
 
-	    // Build center
-	    centerRow.add(overlayEmoji);
-	    centerRow.add(Box.createVerticalStrut(10));
-	    centerRow.add(overlayTitle);
-	    centerRow.add(Box.createVerticalStrut(6));
-	    centerRow.add(overlaySub);
+		// Build center
+		centerRow.add(overlayEmoji);
+		centerRow.add(Box.createVerticalStrut(10));
+		centerRow.add(overlayTitle);
+		centerRow.add(Box.createVerticalStrut(6));
+		centerRow.add(overlaySub);
 
-	    msgCard.add(centerRow, BorderLayout.CENTER);
-	    overlayMessageCard.add(msgCard);
+		msgCard.add(centerRow, BorderLayout.CENTER);
+		overlayMessageCard.add(msgCard);
 
-	    // Pause card
-	    overlayPauseCard = new PauseMenuPanel(
-	            this::togglePauseFromGUI,
-	            () -> parent.startGame(player1Name, player2Name, session.getDifficulty()),
-	            parent::showMainMenu
-	    );
+		// Pause card
+		overlayPauseCard = new PauseMenuPanel(
+				this::togglePauseFromGUI,
+				() -> parent.startGame(player1Name, player2Name, session.getDifficulty()),
+				parent::showMainMenu
+				);
 
-	    cardsHolder.add(overlayMessageCard, "MSG");
-	    cardsHolder.add(overlayPauseCard, "PAUSE");
+		cardsHolder.add(overlayMessageCard, "MSG");
+		cardsHolder.add(overlayPauseCard, "PAUSE");
 
-	    // Gift overlay
-	    giftOverlay = new JPanel(new GridBagLayout());
-	    giftOverlay.setOpaque(false);
-	    giftOverlay.setVisible(false);
+		// Gift overlay
+		giftOverlay = new JPanel(new GridBagLayout());
+		giftOverlay.setOpaque(false);
+		giftOverlay.setVisible(false);
 
-	    giftLabel = new JLabel();
-	    giftLabel.setHorizontalAlignment(SwingConstants.CENTER);
-	    giftLabel.setVerticalAlignment(SwingConstants.CENTER);
-	    giftOverlay.add(giftLabel);
+		giftLabel = new JLabel();
+		giftLabel.setHorizontalAlignment(SwingConstants.CENTER);
+		giftLabel.setVerticalAlignment(SwingConstants.CENTER);
+		giftOverlay.add(giftLabel);
 
-	    // Order matters in OverlayLayout:
-	    overlayRoot.add(cardsHolder);
-	    overlayRoot.add(giftOverlay);
+		// Order matters in OverlayLayout:
+		overlayRoot.add(cardsHolder);
+		overlayRoot.add(giftOverlay);
 
-	    giftOverlay.setAlignmentX(0.5f);
-	    giftOverlay.setAlignmentY(0.5f);
-	    cardsHolder.setAlignmentX(0.5f);
-	    cardsHolder.setAlignmentY(0.5f);
+		giftOverlay.setAlignmentX(0.5f);
+		giftOverlay.setAlignmentY(0.5f);
+		cardsHolder.setAlignmentX(0.5f);
+		cardsHolder.setAlignmentY(0.5f);
 	}
 
 
@@ -595,135 +649,215 @@ public class MinesweeperGUI extends JPanel {
 		timeLabel.setText(String.format("Time: %02d:%02d", minutes, seconds));
 	}
 
-	public void playGiftRevealAndShowOverlay(boolean isFirstBoard, int r, int c,
-	        OverlayType type,
-	        String title, String subtitle,
-	        int overlaySeconds) {
+	private void showResultOverlayWithIcon(ImageIcon icon, String title, String subtitle, int seconds) {
+		if (overlayRoot == null) return;
 
-	    if (buttons1 == null || buttons2 == null) return;
-	    CellButton[][] grid = isFirstBoard ? buttons1 : buttons2;
+		overlayTitle.setText((title == null) ? "" : title.trim());
+		overlaySub.setText(((subtitle == null) ? "" : subtitle.trim()).replace(" | ", "\n"));
 
-	    if (r < 0 || c < 0 || r >= grid.length || c >= grid[0].length) return;
+		// keep center alignment
+		javax.swing.text.SimpleAttributeSet center = new javax.swing.text.SimpleAttributeSet();
+		javax.swing.text.StyleConstants.setAlignment(center, javax.swing.text.StyleConstants.ALIGN_CENTER);
+		overlaySub.setParagraphAttributes(center, true);
 
-	    CellButton btn = grid[r][c];
-	    if (btn == null) return;
+		if (overlayEmoji != null) {
+			overlayEmoji.setText("");
+			if (icon != null) {
+				overlayEmoji.setIcon(scaledIcon(icon, 140, 140));
+			} else {
+				overlayEmoji.setIcon(null);
+			}
+		}
 
-	    // אם אין אייקונים - פשוט מציג Overlay בלי אנימציה
-	    if (ICON_GIFT_CLOSED == null || ICON_GIFT_OPEN == null) {
-	        showResultOverlay(type, title, subtitle, overlaySeconds);
-	        return;
+		if (overlayCards != null && cardsHolder != null) {
+			overlayCards.show(cardsHolder, "MSG");
+			cardsHolder.setVisible(true);
+		}
+
+		overlayRoot.setVisible(true);
+		overlayRoot.repaint();
+
+		if (overlayAutoHideTimer != null && overlayAutoHideTimer.isRunning()) overlayAutoHideTimer.stop();
+		if (seconds > 0) {
+			overlayAutoHideTimer = new Timer(seconds * 1000, e -> hideOverlayNow());
+			overlayAutoHideTimer.setRepeats(false);
+			overlayAutoHideTimer.start();
+		}
+	}
+
+	public void showQuestionResultOverlay(OverlayType type,
+			String title,
+			String subtitle,
+			int seconds) {
+
+		overlayUsingQuestionTheme = true;
+		OverlayCardPanel.setTheme(OVERLAY_BLUE_BG, OVERLAY_BLUE_BORDER);
+
+		int s = 140;
+		if (overlayEmoji != null) {
+			if (type == OverlayType.GOOD) {
+				overlayEmoji.setIcon(scaledIcon(ICON_BLUE_GOOD, s, s));
+			} else if (type == OverlayType.BAD) {
+				overlayEmoji.setIcon(scaledIcon(ICON_BLUE_BAD, s, s));
+			} else {
+				overlayEmoji.setIcon(null);
+			}
+		}
+
+		showResultOverlay(type, title, subtitle, seconds);
+	}
+	
+	public void showNotEnoughPointsOverlay(boolean isQuestionTile, int cost, int currentScore) {
+
+	    overlayUsingQuestionTheme = isQuestionTile;
+
+	    if (overlayUsingQuestionTheme) {
+	        OverlayCardPanel.setTheme(OVERLAY_BLUE_BG, OVERLAY_BLUE_BORDER);
+	    } else {
+	        OverlayCardPanel.setTheme(OVERLAY_PINK_BG, OVERLAY_PINK_BORDER);
 	    }
 
-	    setAllBoardsEnabled(false);
+	    int need = Math.max(0, cost - currentScore);
 
-	    //  קובעים גודל אחיד לפי גודל הכפתור
-	    int cellSize = Math.min(btn.getWidth(), btn.getHeight());
-	    if (cellSize <= 0) cellSize = 48;   // fallback אם עוד לא חושב layout
-	    cellSize = Math.max(22, cellSize - 8);
+	    String title = "NOT ENOUGH SCORE";
+	    String subtitle = "Need " + need + " pts to activate";
 
-	    ImageIcon closed = scaledIcon(ICON_GIFT_CLOSED, cellSize, cellSize);
-	    ImageIcon open   = scaledIcon(ICON_GIFT_OPEN,   cellSize, cellSize);
+	    ImageIcon sadIcon = overlayUsingQuestionTheme ? ICON_BLUE_BAD : ICON_BAD_HEART;
 
-	    // מצב 1: מתנה סגורה
-	    btn.setText("");
-	    btn.setIcon(null);
-	    btn.setScaledIcon(closed);
+	    fitOverlayTitleToWidth(title, 340, 30, 18);
 
-	    Timer t1 = new Timer(350, e1 -> {
+	    showResultOverlayWithIcon(sadIcon, title, subtitle, 2);
+	}
 
-	        // מצב 2: מתנה פתוחה
-	        btn.setText("");
-	        btn.setIcon(null);
-	        btn.setScaledIcon(open);
+	public void playGiftRevealAndShowOverlay(boolean isFirstBoard, int r, int c,
+			OverlayType type,
+			String title, String subtitle,
+			int overlaySeconds) {
 
-	        Timer t2 = new Timer(450, e2 -> {
+		if (buttons1 == null || buttons2 == null) return;
+		CellButton[][] grid = isFirstBoard ? buttons1 : buttons2;
 
-	            // מצב 3: החזרת מצב UI לפי המודל + הצגת Overlay
-	            refreshView();
-	            updateTurnHighlight();
+		if (r < 0 || c < 0 || r >= grid.length || c >= grid[0].length) return;
 
-	            showResultOverlay(type, title, subtitle, overlaySeconds);
+		CellButton btn = grid[r][c];
+		if (btn == null) return;
 
-	            ((Timer) e2.getSource()).stop();
-	        });
+		// אם אין אייקונים - פשוט מציג Overlay בלי אנימציה
+		if (ICON_GIFT_CLOSED == null || ICON_GIFT_OPEN == null) {
+			showResultOverlay(type, title, subtitle, overlaySeconds);
+			return;
+		}
 
-	        t2.setRepeats(false);
-	        t2.start();
+		setAllBoardsEnabled(false);
 
-	        ((Timer) e1.getSource()).stop();
-	    });
+		//  קובעים גודל אחיד לפי גודל הכפתור
+		int cellSize = Math.min(btn.getWidth(), btn.getHeight());
+		if (cellSize <= 0) cellSize = 48;   // fallback אם עוד לא חושב layout
+		cellSize = Math.max(22, cellSize - 8);
 
-	    t1.setRepeats(false);
-	    t1.start();
+		ImageIcon closed = scaledIcon(ICON_GIFT_CLOSED, cellSize, cellSize);
+		ImageIcon open   = scaledIcon(ICON_GIFT_OPEN,   cellSize, cellSize);
+
+		// מצב 1: מתנה סגורה
+		btn.setText("");
+		btn.setIcon(null);
+		btn.setScaledIcon(closed);
+
+		Timer t1 = new Timer(350, e1 -> {
+
+			// מצב 2: מתנה פתוחה
+			btn.setText("");
+			btn.setIcon(null);
+			btn.setScaledIcon(open);
+
+			Timer t2 = new Timer(450, e2 -> {
+
+				// מצב 3: החזרת מצב UI לפי המודל + הצגת Overlay
+				refreshView();
+				updateTurnHighlight();
+
+				showResultOverlay(type, title, subtitle, overlaySeconds);
+
+				((Timer) e2.getSource()).stop();
+			});
+
+			t2.setRepeats(false);
+			t2.start();
+
+			((Timer) e1.getSource()).stop();
+		});
+
+		t1.setRepeats(false);
+		t1.start();
 	}
 
 
 	public void playGiftCenterAndShowOverlay(OverlayType type,
-	        String title, String subtitle,
-	        int overlaySeconds,
-	        Runnable onDone) {
+			String title, String subtitle,
+			int overlaySeconds,
+			Runnable onDone) {
 
-	    if (overlayRoot == null || cardsHolder == null ||
-	            giftOverlay == null || giftLabel == null ||
-	            ICON_GIFT_CLOSED == null || ICON_GIFT_OPEN == null) {
+		if (overlayRoot == null || cardsHolder == null ||
+				giftOverlay == null || giftLabel == null ||
+				ICON_GIFT_CLOSED == null || ICON_GIFT_OPEN == null) {
 
-	        showResultOverlay(type, title, subtitle, overlaySeconds);
-	        if (onDone != null) SwingUtilities.invokeLater(onDone);
-	        return;
-	    }
+			showResultOverlay(type, title, subtitle, overlaySeconds);
+			if (onDone != null) SwingUtilities.invokeLater(onDone);
+			return;
+		}
 
-	    setAllBoardsEnabled(false);
+		setAllBoardsEnabled(false);
 
-	    //  מסתירים את ההודעה/הכרטיס בזמן האנימציה
-	    cardsHolder.setVisible(false);
+		//  מסתירים את ההודעה/הכרטיס בזמן האנימציה
+		cardsHolder.setVisible(false);
 
-	    //  מציגים רק רקע כהה + מתנה
-	    overlayRoot.setVisible(true);
+		//  מציגים רק רקע כהה + מתנה
+		overlayRoot.setVisible(true);
 
-	    //  אותו גודל לשני האייקונים
-	    int size = computeCenterGiftSize();
-	    ImageIcon closed = scaledIcon(ICON_GIFT_CLOSED, size, size);
-	    ImageIcon open   = scaledIcon(ICON_GIFT_OPEN,   size, size);
+		//  אותו גודל לשני האייקונים
+		int size = computeCenterGiftSize();
+		ImageIcon closed = scaledIcon(ICON_GIFT_CLOSED, size, size);
+		ImageIcon open   = scaledIcon(ICON_GIFT_OPEN,   size, size);
 
-	    giftLabel.setHorizontalAlignment(SwingConstants.CENTER);
-	    giftLabel.setVerticalAlignment(SwingConstants.CENTER);
+		giftLabel.setHorizontalAlignment(SwingConstants.CENTER);
+		giftLabel.setVerticalAlignment(SwingConstants.CENTER);
 
-	    giftLabel.setIcon(closed);
-	    giftOverlay.setVisible(true);
+		giftLabel.setIcon(closed);
+		giftOverlay.setVisible(true);
 
-	    overlayRoot.revalidate();
-	    overlayRoot.repaint();
+		overlayRoot.revalidate();
+		overlayRoot.repaint();
 
-	    Timer t1 = new Timer(350, e1 -> {
-	        giftLabel.setIcon(open);
-	        overlayRoot.repaint();
+		Timer t1 = new Timer(350, e1 -> {
+			giftLabel.setIcon(open);
+			overlayRoot.repaint();
 
-	        Timer t2 = new Timer(650, e2 -> {
+			Timer t2 = new Timer(650, e2 -> {
 
-	            // מסתירים מתנה
-	            giftOverlay.setVisible(false);
+				// מסתירים מתנה
+				giftOverlay.setVisible(false);
 
-	            // עכשיו מציגים הודעה
-	            cardsHolder.setVisible(true);
-	            showResultOverlay(type, title, subtitle, overlaySeconds);
+				// עכשיו מציגים הודעה
+				cardsHolder.setVisible(true);
+				showResultOverlay(type, title, subtitle, overlaySeconds);
 
-	            // מחזירים UI
-	            refreshView();
-	            updateTurnHighlight();
+				// מחזירים UI
+				refreshView();
+				updateTurnHighlight();
 
-	            if (onDone != null) SwingUtilities.invokeLater(onDone);
+				if (onDone != null) SwingUtilities.invokeLater(onDone);
 
-	            ((Timer) e2.getSource()).stop();
-	        });
+				((Timer) e2.getSource()).stop();
+			});
 
-	        t2.setRepeats(false);
-	        t2.start();
+			t2.setRepeats(false);
+			t2.start();
 
-	        ((Timer) e1.getSource()).stop();
-	    });
+			((Timer) e1.getSource()).stop();
+		});
 
-	    t1.setRepeats(false);
-	    t1.start();
+		t1.setRepeats(false);
+		t1.start();
 	}
 
 
@@ -981,47 +1115,51 @@ public class MinesweeperGUI extends JPanel {
 
 	private static class OverlayCardPanel extends JPanel {
 
-	    private static Color THEME_BG = new Color(255, 220, 240, 245);
-	    private static Color THEME_BORDER = new Color(150, 70, 170, 180);
+		private static Color THEME_BG     = new Color(255, 220, 240, 245);
+		private static Color THEME_BORDER = new Color(150, 70, 170, 180);
+		private static Color THEME_LINE   = new Color(160, 60, 190, 180);
 
-	    static void setTheme(Color bg, Color border) {
-	        THEME_BG = (bg == null) ? THEME_BG : bg;
-	        THEME_BORDER = (border == null) ? THEME_BORDER : border;
-	    }
+		static void setTheme(Color bg, Color border) {
+			if (bg != null) THEME_BG = bg;
+			if (border != null) {
+				THEME_BORDER = border;
+				// line color derived from border (nicer + matches theme)
+				THEME_LINE = new Color(border.getRed(), border.getGreen(), border.getBlue(), 160);
+			}
+		}
 
-	    OverlayCardPanel() { setOpaque(false); }
+		OverlayCardPanel() { setOpaque(false); }
 
-	    @Override
-	    protected void paintComponent(Graphics g) {
-	        super.paintComponent(g);
-	        Graphics2D g2 = (Graphics2D) g.create();
-	        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		@Override
+		protected void paintComponent(Graphics g) {
+			super.paintComponent(g);
+			Graphics2D g2 = (Graphics2D) g.create();
+			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-	        int w = getWidth();
-	        int h = getHeight();
+			int w = getWidth();
+			int h = getHeight();
+			int arc = 12;
 
-	        int arc = 12;
+			// Shadow
+			g2.setColor(new Color(0, 0, 0, 70));
+			g2.fillRoundRect(10, 12, w - 16, h - 16, arc, arc);
 
-	        // Shadow
-	        g2.setColor(new Color(0, 0, 0, 70));
-	        g2.fillRoundRect(10, 12, w - 16, h - 16, arc, arc);
+			// Glass bg
+			g2.setColor(THEME_BG);
+			g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
 
-	        // Pink glass background
-	        g2.setColor(THEME_BG);
-	        g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
+			// Border
+			g2.setColor(THEME_BORDER);
+			g2.setStroke(new BasicStroke(3f));
+			g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
 
-	        // Border purple
-	        g2.setColor(THEME_BORDER);
-	        g2.setStroke(new BasicStroke(3f));
-	        g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
+			// Bottom line (theme)
+			g2.setColor(THEME_LINE);
+			g2.setStroke(new BasicStroke(6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g2.drawLine(24, h - 20, w - 24, h - 20);
 
-	        // Small cute bottom line
-	        g2.setColor(new Color(160, 60, 190, 180));
-	        g2.setStroke(new BasicStroke(6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-	        g2.drawLine(24, h - 20, w - 24, h - 20);
-
-	        g2.dispose();
-	    }
+			g2.dispose();
+		}
 	}
 
 	private static class OverlayIcon extends JComponent {
@@ -1071,35 +1209,48 @@ public class MinesweeperGUI extends JPanel {
 	}
 
 	private static class CloseIconButton extends JButton {
-		CloseIconButton() {
-			setPreferredSize(new Dimension(36, 36));
-			setContentAreaFilled(false);
-			setBorderPainted(false);
-			setFocusPainted(false);
-			setOpaque(false);
-			setCursor(new Cursor(Cursor.HAND_CURSOR));
-		}
+	    private boolean hover = false;
+	    private boolean down  = false;
 
-		@Override
-		protected void paintComponent(Graphics g) {
-			Graphics2D g2 = (Graphics2D) g.create();
-			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+	    CloseIconButton() {
+	        setPreferredSize(new Dimension(36, 36));
+	        setContentAreaFilled(false);
+	        setBorderPainted(false);
+	        setFocusPainted(false);
+	        setOpaque(false);
+	        setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-			int w = getWidth();
-			int h = getHeight();
+	        addMouseListener(new MouseAdapter() {
+	            @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+	            @Override public void mouseExited(MouseEvent e)  { hover = false; down = false; repaint(); }
+	            @Override public void mousePressed(MouseEvent e) { down = true; repaint(); }
+	            @Override public void mouseReleased(MouseEvent e){ down = false; repaint(); }
+	        });
+	    }
 
-			g2.setColor(new Color(255, 255, 255, 25));
-			g2.fillOval(4, 4, w - 8, h - 8);
+	    @Override
+	    protected void paintComponent(Graphics g) {
+	        Graphics2D g2 = (Graphics2D) g.create();
+	        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-			g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-			g2.setColor(Color.WHITE);
+	        int w = getWidth();
+	        int h = getHeight();
 
-			int pad = 12;
-			g2.drawLine(pad, pad, w - pad, h - pad);
-			g2.drawLine(w - pad, pad, pad, h - pad);
+	        // subtle hover highlight (rounded square, not circle)
+	        if (hover) {
+	            g2.setColor(new Color(255, 255, 255, down ? 70 : 40));
+	            g2.fillRoundRect(5, 5, w - 10, h - 10, 10, 10);
+	        }
 
-			g2.dispose();
-		}
+	        g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+	        g2.setColor(Color.WHITE);
+
+	        int pad = 12;
+	        g2.drawLine(pad, pad, w - pad, h - pad);
+	        g2.drawLine(w - pad, pad, pad, h - pad);
+
+	        g2.dispose();
+	    }
 	}
 
 	private static class PauseIconButton extends JButton {

@@ -3,171 +3,629 @@ package view;
 import model.Question;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.awt.event.*;
 
-/**
- * מסך השאלה – דיאלוג מודאלי שמקבל Question ומחזיר true/false אם המשתמש צדק.
- * כולל טיימר של 30 שניות ומשוב צבעוני (ירוק/אדום) על הכפתורים.
- */
 public class QuestionDialog {
 
-    /**
-     * מציג חלון שאלה ומחזיר:
-     *  true  – אם המשתמש לחץ על התשובה הנכונה
-     *  false – אם טעה או שהזמן נגמר
-     */
-    public static boolean showQuestionDialog(Component parent, Question question) {
+    // ========= size & time =========
+    private static final int CARD_W = 660;
+    private static final int CARD_H = 440;
+    private static final int TOTAL_SECONDS = 20;
 
-        final boolean[] answered = new boolean[1];
-        final boolean[] correct  = new boolean[1];
-        answered[0] = false;
-        correct[0]  = false;
+    // ========= theme (blue glass) =========
+    private static final Color CARD_BG     = new Color(225, 242, 255, 235);
+    private static final Color CARD_BORDER = new Color(90, 155, 220, 170);
 
-        // דיאלוג מודאלי מעל החלון של המשחק
-        JDialog dialog = new JDialog(
-                SwingUtilities.getWindowAncestor(parent),
-                "Question",
-                Dialog.ModalityType.APPLICATION_MODAL
-        );
-        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setLayout(new BorderLayout(10, 10));
-        dialog.setResizable(false);
+    // text
+    private static final Color TITLE_TXT    = new Color(18, 55, 105);
+    private static final Color QUESTION_TXT = new Color(25, 55, 95);
 
-        // ======= TOP BAR: אייקון + כותרת + טיימר =======
-        JPanel topPanel = new JPanel(new BorderLayout(10, 0));
-        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
-        topPanel.setBackground(new Color(245, 249, 255));
+    // answer card
+    private static final Color ANS_BG       = new Color(255, 255, 255, 215);
+    private static final Color ANS_BG_HOVER = new Color(240, 248, 255, 240);
+    private static final Color ANS_BG_DOWN  = new Color(230, 243, 255, 245);
+    private static final Color ANS_BORDER   = new Color(120, 175, 230, 150);
 
-        JLabel iconLabel = new JLabel("?", SwingConstants.CENTER);
-        iconLabel.setPreferredSize(new Dimension(40, 40));
-        iconLabel.setOpaque(true);
-        iconLabel.setBackground(new Color(220, 235, 255));
-        iconLabel.setForeground(new Color(30, 95, 160));
-        iconLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        iconLabel.setBorder(BorderFactory.createLineBorder(new Color(200, 220, 245)));
+    // badge
+    private static final Color BADGE_BG  = new Color(210, 235, 255, 255);
+    private static final Color BADGE_TXT = new Color(18, 55, 105);
 
-        JLabel titleLabel = new JLabel("Question", SwingConstants.LEFT);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        titleLabel.setForeground(new Color(30, 30, 30));
+    // overlay
+    private static final Color OVERLAY_DARK = new Color(0, 0, 0, 155);
 
-        JLabel timerLabel = new JLabel("Time: 30s", SwingConstants.RIGHT);
-        timerLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        timerLabel.setForeground(new Color(120, 120, 120));
+    // ========= fonts (FIX: avoid "Semibold" to prevent fallback spacing) =========
+    private static final Font FONT_TITLE    = new Font("Segoe UI", Font.BOLD, 24);
+    private static final Font FONT_QUESTION = new Font("Segoe UI", Font.BOLD, 20);
+    private static final Font FONT_ANS      = new Font("Segoe UI", Font.PLAIN, 15);
+    private static final Font FONT_BADGE    = new Font("Segoe UI", Font.BOLD, 14);
+    private static final Font FONT_SMALL    = new Font("Segoe UI", Font.BOLD, 14);
 
-        topPanel.add(iconLabel, BorderLayout.WEST);
-        topPanel.add(titleLabel, BorderLayout.CENTER);
-        topPanel.add(timerLabel, BorderLayout.EAST);
+    public static boolean showQuestionDialog(Component parent, Question q) {
+        Window owner = SwingUtilities.getWindowAncestor(parent);
 
-        dialog.add(topPanel, BorderLayout.NORTH);
+        final JDialog dialog = new JDialog(owner, "Question", Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
+        dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-        // ======= טקסט השאלה =======
-        JLabel questionLabel = new JLabel(
-                "<html><div style='text-align:center; width:350px;'>"
-                        + question.getQuestionText() +
-                        "</div></html>",
-                SwingConstants.CENTER
-        );
-        questionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        questionLabel.setBorder(BorderFactory.createEmptyBorder(5, 20, 15, 20));
+        // ===== Full-screen overlay panel =====
+        JPanel overlay = new JPanel(new GridBagLayout()) {
+            @Override protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                applyTextHints(g2);
+                g2.setColor(OVERLAY_DARK);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.dispose();
+            }
+        };
+        overlay.setOpaque(false);
+        overlay.setBorder(new EmptyBorder(24, 24, 24, 24));
 
-        dialog.add(questionLabel, BorderLayout.CENTER);
+        // center card
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0; gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER;
 
-        // ======= תשובות =======
-        JPanel answersPanel = new JPanel(new GridLayout(2, 2, 12, 12));
-        answersPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 20, 20));
-        answersPanel.setBackground(Color.WHITE);
+        // Card 
+        GlassCard card = new GlassCard();
+        card.setPreferredSize(new Dimension(CARD_W, CARD_H));
+        card.setLayout(new BorderLayout());
+        card.setBorder(new EmptyBorder(16, 18, 14, 18));
 
-        String[] answers = question.getAnswers();
-        final int correctIndex = question.getCorrectAnswerIndex();
+        // Header 
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
 
-        // נשתמש ברשימה כדי שנוכל לשנות צבעים אחרי הבחירה
-        List<JButton> answerButtons = new ArrayList<>();
+        // left (icon + title)
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        left.setOpaque(false);
 
-        // טיימר – 30 שניות
-        final int[] remainingSeconds = {30};
-        Timer timer = new Timer(1000, e -> {
-            remainingSeconds[0]--;
-            timerLabel.setText("Time: " + remainingSeconds[0] + "s");
+        JLabel icon = new JLabel("?");
+        icon.setHorizontalAlignment(SwingConstants.CENTER);
+        icon.setPreferredSize(new Dimension(42, 42));
+        icon.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        icon.setForeground(TITLE_TXT);
+        icon.setOpaque(true);
+        icon.setBackground(new Color(255, 255, 255, 175));
+        icon.setBorder(BorderFactory.createLineBorder(new Color(120, 175, 230, 140), 1, true));
 
-            if (remainingSeconds[0] <= 0) {
+        JLabel title = new JLabel("Question");
+        title.setFont(FONT_TITLE);
+        title.setForeground(TITLE_TXT);
+
+        left.add(icon);
+        left.add(title);
+
+        // right (timer + close)
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        right.setOpaque(false);
+        right.setPreferredSize(new Dimension(180, 42));
+
+        TimeChip timeChip = new TimeChip(TOTAL_SECONDS);
+        CloseIconButton close = new CloseIconButton();
+        close.setPreferredSize(new Dimension(36, 36));
+
+        right.add(timeChip);
+        right.add(close);
+
+        header.add(left, BorderLayout.WEST);
+        header.add(right, BorderLayout.EAST);
+        header.setPreferredSize(new Dimension(1, 52));
+
+        // Question text 
+        JLabel questionLbl = new JLabel(wrapHtml(safe(q.getQuestionText()), 46), SwingConstants.CENTER);
+        questionLbl.setFont(FONT_QUESTION);
+        questionLbl.setForeground(QUESTION_TXT);
+        questionLbl.setBorder(new EmptyBorder(14, 22, 10, 22));
+        questionLbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // divider line
+        JComponent divider = new JComponent() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                applyTextHints(g2);
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(90, 155, 220, 120));
+                int w = getWidth();
+                g2.fillRoundRect(70, 0, Math.max(0, w - 140), 2, 2, 2);
+                g2.dispose();
+            }
+        };
+        divider.setPreferredSize(new Dimension(1, 12));
+        divider.setOpaque(false);
+
+        // Answers 
+        JPanel answers = new JPanel(new GridLayout(2, 2, 14, 14));
+        answers.setOpaque(false);
+        answers.setBorder(new EmptyBorder(10, 12, 10, 12));
+
+        String[] ans = (q.getAnswers() == null) ? new String[]{"", "", "", ""} : q.getAnswers();
+        String a = safe(ans.length > 0 ? ans[0] : "");
+        String b = safe(ans.length > 1 ? ans[1] : "");
+        String c = safe(ans.length > 2 ? ans[2] : "");
+        String d = safe(ans.length > 3 ? ans[3] : "");
+
+        AnswerCard btnA = new AnswerCard("A", a);
+        AnswerCard btnB = new AnswerCard("B", b);
+        AnswerCard btnC = new AnswerCard("C", c);
+        AnswerCard btnD = new AnswerCard("D", d);
+
+        answers.add(btnA);
+        answers.add(btnB);
+        answers.add(btnC);
+        answers.add(btnD);
+
+        // Progress bar
+        TimeBar timeBar = new TimeBar(TOTAL_SECONDS);
+        timeBar.setPreferredSize(new Dimension(1, 10));
+
+        // center stack
+        JPanel center = new JPanel();
+        center.setOpaque(false);
+        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
+        center.add(questionLbl);
+        center.add(divider);
+        center.add(Box.createVerticalStrut(8));
+        center.add(answers);
+
+        card.add(header, BorderLayout.NORTH);
+        card.add(center, BorderLayout.CENTER);
+        card.add(timeBar, BorderLayout.SOUTH);
+
+        overlay.add(card, gbc);
+        dialog.setContentPane(overlay);
+
+        // Logic
+        final boolean[] answered = { false };
+        final boolean[] result   = { false };
+
+        close.addActionListener(e -> {
+            answered[0] = true;
+            result[0] = false;
+            dialog.dispose();
+        });
+
+        // Timer
+        final int[] leftSec = { TOTAL_SECONDS };
+        timeChip.setSeconds(leftSec[0]);
+        timeBar.setSecondsLeft(leftSec[0]);
+
+        Timer t = new Timer(1000, e -> {
+            leftSec[0]--;
+            timeChip.setSeconds(leftSec[0]);
+            timeBar.setSecondsLeft(leftSec[0]);
+
+            if (leftSec[0] <= 0) {
                 ((Timer) e.getSource()).stop();
-                if (!answered[0]) {
-                    answered[0] = true;
-                    correct[0] = false;
-                }
+                answered[0] = true;
+                result[0] = false;
                 dialog.dispose();
             }
         });
+        t.setInitialDelay(1000);
+        t.start();
 
-        // יצירת כפתורי תשובות
-        for (int i = 0; i < answers.length; i++) {
-            String text = answers[i];
-            JButton btn = new JButton(text);
-            btn.setFont(new Font("Segoe UI", Font.PLAIN, 15));
-            btn.setFocusPainted(false);
-            btn.setBackground(new Color(240, 245, 252));
-            btn.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(200, 215, 235)),
-                    BorderFactory.createEmptyBorder(6, 10, 6, 10)
-            ));
+        ActionListener pick = ae -> {
+            if (answered[0]) return;
+            answered[0] = true;
 
-            final int answerIndex = i;
-            btn.addActionListener(e -> {
-                if (answered[0]) return; // כבר נענתה
+            btnA.setEnabled(false);
+            btnB.setEnabled(false);
+            btnC.setEnabled(false);
+            btnD.setEnabled(false);
 
-                answered[0] = true;
-                correct[0] = (answerIndex == correctIndex);
+            int idx = -1;
+            Object src = ae.getSource();
+            if (src == btnA) idx = 0;
+            if (src == btnB) idx = 1;
+            if (src == btnC) idx = 2;
+            if (src == btnD) idx = 3;
 
-                // עצירת טיימר
-                timer.stop();
+            if (src instanceof AnswerCard) ((AnswerCard) src).setChosen(true);
 
-                // השבתת כל הכפתורים
-                for (JButton b : answerButtons) {
-                    b.setEnabled(false);
-                }
+            result[0] = (idx != -1) && q.isCorrect(idx);
+            dialog.dispose();
+        };
 
-                // צבעים: ירוק לתשובה הנכונה, אדום לתשובה השגויה שנבחרה
-                Color green = new Color(120, 190, 120);
-                Color red   = new Color(220, 110, 110);
+        btnA.addActionListener(pick);
+        btnB.addActionListener(pick);
+        btnC.addActionListener(pick);
+        btnD.addActionListener(pick);
 
-                if (correct[0]) {
-                    JButton correctBtn = answerButtons.get(correctIndex);
-                    correctBtn.setBackground(green);
-                    correctBtn.setForeground(Color.WHITE);
-                } else {
-                    JButton clickedBtn = answerButtons.get(answerIndex);
-                    clickedBtn.setBackground(red);
-                    clickedBtn.setForeground(Color.WHITE);
+        // ESC closes
+        dialog.getRootPane().registerKeyboardAction(
+                e -> close.doClick(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
 
-                    JButton correctBtn = answerButtons.get(correctIndex);
-                    correctBtn.setBackground(green);
-                    correctBtn.setForeground(Color.WHITE);
-                }
+        dialog.addWindowListener(new WindowAdapter() {
+            @Override public void windowClosed(WindowEvent e) {
+                if (t.isRunning()) t.stop();
+            }
+        });
 
-                // מחכים קצת כדי שהשחקן יראה את הצבעים ואז סוגרים
-                Timer closeTimer = new Timer(700, ev -> {
-                    ((Timer) ev.getSource()).stop();
-                    dialog.dispose();
-                });
-                closeTimer.setRepeats(false);
-                closeTimer.start();
-            });
-
-            answerButtons.add(btn);
-            answersPanel.add(btn);
+        // full overlay size
+        if (owner != null) {
+            dialog.setSize(owner.getSize());
+            dialog.setLocation(owner.getLocationOnScreen());
+        } else {
+            dialog.setSize(900, 600);
+            dialog.setLocationRelativeTo(parent);
         }
 
-        dialog.add(answersPanel, BorderLayout.SOUTH);
+        dialog.setVisible(true);
+        return result[0];
+    }
 
-        dialog.pack();
-        dialog.setLocationRelativeTo(parent);
+    // helpers
 
-        // להתחיל את הטיימר רק כשהדיאלוג מוכן
-        timer.start();
-        dialog.setVisible(true); // בלוקינג עד שסוגרים
+    private static String safe(String s) { return (s == null) ? "" : s.trim(); }
 
-        return correct[0];
+    private static String wrapHtml(String text, int maxCharsPerLine) {
+        if (text == null) return "";
+        StringBuilder sb = new StringBuilder("<html><div style='text-align:center; line-height:1.25;'>");
+        int count = 0;
+        for (String word : text.split("\\s+")) {
+            if (count + word.length() > maxCharsPerLine) {
+                sb.append("<br>");
+                count = 0;
+            }
+            sb.append(word).append(" ");
+            count += word.length() + 1;
+        }
+        sb.append("</div></html>");
+        return sb.toString();
+    }
+
+    private static void applyTextHints(Graphics2D g2) {
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+    }
+
+    // UI components
+
+    private static class GlassCard extends JPanel {
+        @Override protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            applyTextHints(g2);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+            int arc = 18;
+
+            // shadow
+            g2.setColor(new Color(0, 0, 0, 65));
+            g2.fillRoundRect(10, 12, w - 16, h - 16, arc, arc);
+
+            // glass bg
+            g2.setColor(CARD_BG);
+            g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
+
+            // border
+            g2.setColor(CARD_BORDER);
+            understandingStroke(g2, 3f);
+            g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
+
+            g2.dispose();
+        }
+    }
+
+    private static void understandingStroke(Graphics2D g2, float w) {
+        g2.setStroke(new BasicStroke(w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    }
+
+    // timer chip
+    private static class TimeChip extends JComponent {
+        private int seconds;
+
+        TimeChip(int seconds) {
+            this.seconds = seconds;
+            setPreferredSize(new Dimension(110, 34));
+            setMinimumSize(new Dimension(110, 34));
+            setOpaque(false);
+            setToolTipText("Time left");
+        }
+
+        void setSeconds(int s) {
+            seconds = Math.max(0, s);
+            repaint();
+        }
+
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            applyTextHints(g2);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+
+            g2.setColor(new Color(255, 255, 255, 190));
+            g2.fillRoundRect(0, 0, w - 1, h - 1, 18, 18);
+
+            g2.setColor(new Color(120, 175, 230, 150));
+            understandingStroke(g2, 1.5f);
+            g2.drawRoundRect(1, 1, w - 3, h - 3, 18, 18);
+
+            g2.setColor(new Color(70, 140, 210, 220));
+            g2.fillOval(10, 9, 16, 16);
+            g2.setColor(new Color(255, 255, 255, 235));
+            understandingStroke(g2, 2f);
+            g2.drawLine(18, 12, 18, 17);
+            g2.drawLine(18, 17, 22, 17);
+
+            String txt = seconds + "s";
+            g2.setFont(FONT_SMALL);
+            FontMetrics fm = g2.getFontMetrics();
+            int tx = 34;
+            int ty = (h - fm.getHeight()) / 2 + fm.getAscent();
+
+            g2.setColor(TITLE_TXT);
+            g2.drawString(txt, tx, ty);
+
+            g2.dispose();
+        }
+    }
+
+    // close button
+    private static class CloseIconButton extends JButton {
+        private boolean hover = false;
+        private boolean down  = false;
+
+        CloseIconButton() {
+            setPreferredSize(new Dimension(34, 34));
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            setOpaque(false);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
+            setToolTipText("Close");
+
+            setRolloverEnabled(false);
+            setBorder(BorderFactory.createEmptyBorder());
+
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+                @Override public void mouseExited(MouseEvent e)  { hover = false; down = false; repaint(); }
+                @Override public void mousePressed(MouseEvent e) { down = true; repaint(); }
+                @Override public void mouseReleased(MouseEvent e){ down = false; repaint(); }
+            });
+        }
+
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            applyTextHints(g2);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+
+            if (hover) {
+                g2.setColor(new Color(120, 175, 230, down ? 70 : 35));
+                g2.fillRoundRect(4, 4, w - 8, h - 8, 10, 10);
+            }
+
+            g2.setColor(TITLE_TXT);
+            understandingStroke(g2, 2.6f);
+            int pad = 11;
+            g2.drawLine(pad, pad, w - pad, h - pad);
+            g2.drawLine(w - pad, pad, pad, h - pad);
+
+            g2.dispose();
+        }
+    }
+    
+    private static String[] wrapTwoLines(String text, FontMetrics fm, int maxW) {
+        if (text == null) return new String[]{"", ""};
+        text = text.trim();
+        if (text.isEmpty()) return new String[]{"", ""};
+
+        java.util.List<String> words = java.util.Arrays.asList(text.split("\\s+"));
+        StringBuilder line1 = new StringBuilder();
+        StringBuilder line2 = new StringBuilder();
+
+        // build line1
+        int i = 0;
+        for (; i < words.size(); i++) {
+            String w = words.get(i);
+            String candidate = line1.length() == 0 ? w : (line1 + " " + w);
+            if (fm.stringWidth(candidate) <= maxW) {
+                line1.setLength(0);
+                line1.append(candidate);
+            } else {
+                break;
+            }
+        }
+
+        // build line2
+        for (; i < words.size(); i++) {
+            String w = words.get(i);
+            String candidate = line2.length() == 0 ? w : (line2 + " " + w);
+            if (fm.stringWidth(candidate) <= maxW) {
+                line2.setLength(0);
+                line2.append(candidate);
+            } else {
+                break;
+            }
+        }
+
+        // if still remaining words -> ellipsis on line2
+        if (i < words.size()) {
+            String base = line2.toString();
+            if (base.isEmpty()) base = line1.toString();
+            if (base.isEmpty()) base = words.get(0);
+
+            String trimmed = base;
+            while (trimmed.length() > 2 && fm.stringWidth(trimmed + "...") > maxW) {
+                trimmed = trimmed.substring(0, trimmed.length() - 1);
+            }
+            line2.setLength(0);
+            line2.append(trimmed).append("...");
+        }
+
+        return new String[]{line1.toString(), line2.toString()};
+    }
+
+    private static String cutToWidth(String text, FontMetrics fm, int maxW) {
+        if (text == null) return "";
+        text = text.trim();
+        if (fm.stringWidth(text) <= maxW) return text;
+        String s = text;
+        while (s.length() > 2 && fm.stringWidth(s + "...") > maxW) {
+            s = s.substring(0, s.length() - 1);
+        }
+        return s + "...";
+    }
+
+    private static class AnswerCard extends JButton {
+        private boolean hover = false;
+        private boolean down  = false;
+        private boolean chosen = false;
+
+        private final String badge;
+        private final String text;
+
+        AnswerCard(String badge, String text) {
+            this.badge = badge;
+            this.text  = text;
+
+            setFocusPainted(false);
+            setBorderPainted(false);
+            setContentAreaFilled(false);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
+            setForeground(TITLE_TXT);
+            setRolloverEnabled(false);
+
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+                @Override public void mouseExited(MouseEvent e)  { hover = false; down = false; repaint(); }
+                @Override public void mousePressed(MouseEvent e) { down = true; repaint(); }
+                @Override public void mouseReleased(MouseEvent e){ down = false; repaint(); }
+            });
+        }
+
+        public void setChosen(boolean v) {
+            chosen = v;
+            repaint();
+        }
+
+        @Override public Dimension getPreferredSize() {
+            return new Dimension(250, 92);
+        }
+
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            applyTextHints(g2);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+            int arc = 16;
+
+            Color bg = ANS_BG;
+            if (down) bg = ANS_BG_DOWN;
+            else if (hover) bg = ANS_BG_HOVER;
+            if (chosen) bg = new Color(220, 242, 255, 245);
+
+            g2.setColor(new Color(0, 0, 0, 30));
+            g2.fillRoundRect(6, 8, w - 12, h - 12, arc, arc);
+
+            g2.setColor(bg);
+            g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
+
+            g2.setColor(chosen ? new Color(70, 140, 210, 200) : ANS_BORDER);
+            understandingStroke(g2, chosen ? 3f : 2f);
+            g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
+
+            int r = 30;
+            int bx = 16;
+            int by = (h - r) / 2;
+
+            g2.setColor(BADGE_BG);
+            g2.fillOval(bx, by, r, r);
+            g2.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            understandingStroke(g2, 2f);
+            g2.drawOval(bx, by, r, r);
+
+            g2.setColor(BADGE_TXT);
+            g2.setFont(FONT_BADGE);
+            FontMetrics fmB = g2.getFontMetrics();
+            int tx = bx + (r - fmB.stringWidth(badge)) / 2;
+            int ty = by + (r - fmB.getHeight()) / 2 + fmB.getAscent();
+            g2.drawString(badge, tx, ty);
+
+            g2.setColor(QUESTION_TXT);
+            g2.setFont(FONT_ANS);
+            FontMetrics fm = g2.getFontMetrics();
+
+            String raw = (text == null) ? "" : text;
+
+            // קצת יותר מקום לטקסט
+            int textX = bx + r + 16;
+            int maxW  = w - textX - 18;
+
+            // שתי שורות
+            String[] lines = wrapTwoLines(raw, fm, maxW);
+            String l1 = lines[0];
+            String l2 = lines[1];
+
+            // אם אין שורה 2 בכלל – מציירים באמצע כמו קודם
+            if (l2 == null || l2.isEmpty()) {
+                l1 = cutToWidth(l1, fm, maxW);
+                int textY = (h - fm.getHeight()) / 2 + fm.getAscent();
+                g2.drawString(l1, textX, textY);
+            } else {
+                // מציירים 2 שורות עם ריווח יפה
+                int lineH = fm.getHeight();
+                int totalH = lineH * 2 - 2;
+                int startY = (h - totalH) / 2 + fm.getAscent();
+
+                g2.drawString(cutToWidth(l1, fm, maxW), textX, startY);
+                g2.drawString(cutToWidth(l2, fm, maxW), textX, startY + lineH - 2);
+            }
+
+            g2.dispose();
+        }
+    }
+
+    private static class TimeBar extends JComponent {
+        private final int total;
+        private int left;
+
+        TimeBar(int totalSeconds) {
+            this.total = Math.max(1, totalSeconds);
+            this.left  = totalSeconds;
+            setOpaque(false);
+        }
+
+        void setSecondsLeft(int s) {
+            left = Math.max(0, Math.min(total, s));
+            repaint();
+        }
+
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            applyTextHints(g2);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int pad = 30;
+
+            g2.setColor(new Color(70, 140, 210, 70));
+            g2.fillRoundRect(pad, 3, w - pad * 2, 5, 8, 8);
+
+            double ratio = (double) left / (double) total;
+            int fw = (int) ((w - pad * 2) * ratio);
+
+            g2.setColor(new Color(70, 140, 210, 200));
+            g2.fillRoundRect(pad, 3, Math.max(0, fw), 5, 8, 8);
+
+            g2.dispose();
+        }
     }
 }
