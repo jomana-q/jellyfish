@@ -41,17 +41,22 @@ public class MinesweeperGUI extends JPanel {
 	private static final Color OVERLAY_BLUE_BORDER = new Color(70, 140, 210, 180);
 
 	public enum OverlayType { GOOD, BAD, INFO }
-	
+
+	// Used icons (after activation)
+	private final ImageIcon ICON_QUESTION_USED = loadIcon("/images/question_used.png"); 
+	private final ImageIcon ICON_SURPRISE_USED = loadIcon("/images/gift_open.png");    
+
 	// Overlay font sizing
 	private static final int OVERLAY_TITLE_MAX = 24;   
 	private static final int OVERLAY_TITLE_MIN = 16;
 	private static final int OVERLAY_TITLE_WIDTH = 340;
-	private static final int OVERLAY_SUB_SIZE = 15;    
+	private static final int OVERLAY_SUB_SIZE = 15;
 
 	// Game fields
 	private final Board board1;
 	private final Board board2;
 	private final GameSession session;
+	private final Difficulty difficulty;
 
 	private final String player1Name;
 	private final String player2Name;
@@ -72,6 +77,8 @@ public class MinesweeperGUI extends JPanel {
 	private PauseIconButton pauseBtn;
 	private LivesHeartsPanel livesHeartsPanel;
 	private JLabel scoreChip;
+	private JLabel minesLeftALabel;
+	private JLabel minesLeftBLabel;
 
 	// Gift overlay (full screen)
 	private JPanel cardsHolder;
@@ -108,6 +115,8 @@ public class MinesweeperGUI extends JPanel {
 		this.board1 = board1;
 		this.board2 = board2;
 		this.session = session;
+		this.difficulty = session.getDifficulty();
+
 
 		initUI();
 		refreshView();
@@ -135,21 +144,21 @@ public class MinesweeperGUI extends JPanel {
 		Image img = src.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
 		return new ImageIcon(img);
 	}
-	
-	private void fitOverlayTitleToWidth(String text, int maxWidth, int maxSize, int minSize) {
-	    if (overlayTitle == null) return;
 
-	    int size = maxSize;
-	    while (size >= minSize) {
-	        Font f = new Font("Segoe UI", Font.BOLD, size);
-	        FontMetrics fm = overlayTitle.getFontMetrics(f);
-	        if (fm.stringWidth(text) <= maxWidth) {
-	            overlayTitle.setFont(f);
-	            return;
-	        }
-	        size--;
-	    }
-	    overlayTitle.setFont(new Font("Segoe UI", Font.BOLD, minSize));
+	private void fitOverlayTitleToWidth(String text, int maxWidth, int maxSize, int minSize) {
+		if (overlayTitle == null) return;
+
+		int size = maxSize;
+		while (size >= minSize) {
+			Font f = new Font("Segoe UI", Font.BOLD, size);
+			FontMetrics fm = overlayTitle.getFontMetrics(f);
+			if (fm.stringWidth(text) <= maxWidth) {
+				overlayTitle.setFont(f);
+				return;
+			}
+			size--;
+		}
+		overlayTitle.setFont(new Font("Segoe UI", Font.BOLD, minSize));
 	}
 
 	//helper: compute a good center-gift size based on overlay size
@@ -178,9 +187,9 @@ public class MinesweeperGUI extends JPanel {
 		overlaySub.setFont(new Font("Segoe UI", Font.PLAIN, OVERLAY_SUB_SIZE));
 
 		if (overlayUsingQuestionTheme) {
-		    overlayTitle.setForeground(new Color(18, 55, 105));   // Blue (Question)
+			overlayTitle.setForeground(new Color(18, 55, 105));   // Blue (Question)
 		} else {
-		    overlayTitle.setForeground(new Color(120, 45, 160));  // Purple (Surprise)
+			overlayTitle.setForeground(new Color(120, 45, 160));  // Purple (Surprise)
 		}
 
 		// Keep center alignment
@@ -307,21 +316,23 @@ public class MinesweeperGUI extends JPanel {
 	}
 
 	private JPanel buildMainPanel() {
-		JPanel root = new JPanel(new BorderLayout(14, 12));
+		JPanel root = new JPanel(new BorderLayout(8, 8)); 
 		root.setOpaque(false);
-		root.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+		int pad = (difficulty == Difficulty.HARD) ? 12 : 20;
+		root.setBorder(BorderFactory.createEmptyBorder(pad, pad, pad, pad));
 
 		JPanel header = new JPanel();
 		header.setOpaque(false);
 		header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
 
 		header.add(buildPlayersRow());
-		header.add(Box.createVerticalStrut(10));
+		header.add(Box.createVerticalStrut(6));  
 		header.add(buildBoardsTitleRow());
 
 		root.add(header, BorderLayout.NORTH);
 
-		JPanel boardsContainer = new JPanel(new GridLayout(1, 2, 28, 0));
+		int gap = (difficulty == Difficulty.HARD) ? 16 : 28;
+		JPanel boardsContainer = new JPanel(new GridLayout(1, 2, gap, 0));
 		boardsContainer.setOpaque(false);
 
 		JPanel boardPanel1 = buildSingleBoardPanel(board1, true);
@@ -337,66 +348,103 @@ public class MinesweeperGUI extends JPanel {
 	}
 
 	private JPanel buildPlayersRow() {
-		JPanel row = new JPanel(new BorderLayout());
-		row.setOpaque(false);
+	    JPanel row = new JPanel(new BorderLayout());
+	    row.setOpaque(false);
 
-		playerALabel = createDynamicLabel(player1Name, new Font("Segoe UI", Font.BOLD, 14));
-		playerBLabel = createDynamicLabel(player2Name, new Font("Segoe UI", Font.BOLD, 14));
+	    playerALabel = createDynamicLabel(player1Name, new Font("Segoe UI", Font.BOLD, 14));
+	    playerBLabel = createDynamicLabel(player2Name, new Font("Segoe UI", Font.BOLD, 14));
 
-		JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-		center.setOpaque(false);
+	    minesLeftALabel = createDynamicLabel("Mines left: 0", new Font("Segoe UI", Font.PLAIN, 16));
+	    minesLeftBLabel = createDynamicLabel("Mines left: 0", new Font("Segoe UI", Font.PLAIN, 16));
 
-		timeLabel = createDynamicLabel("Time: 00:00", new Font("Segoe UI", Font.BOLD, 18));
-		turnLabel = createDynamicLabel("Turn: Player 1", new Font("Segoe UI", Font.BOLD, 18));
+	    p1Indicator = new TurnIndicator();
+	    p2Indicator = new TurnIndicator();
 
-		pauseBtn = new PauseIconButton();
-		pauseBtn.setToolTipText("Pause / Resume");
-		pauseBtn.addActionListener(e -> togglePauseFromGUI());
+	    // LEFT (Player A + mines left)
+	    JPanel left = new JPanel();
+	    left.setOpaque(false);
+	    left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
 
-		center.add(turnLabel);
-		center.add(timeLabel);
-		
-		JButton infoBtn = new JButton("ℹ️");
-		infoBtn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20));
-		infoBtn.setToolTipText("Game Rules & Info");
-		infoBtn.setContentAreaFilled(false);
-		infoBtn.setBorderPainted(false);
-		infoBtn.setFocusPainted(false);
-		infoBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		// نستخدم createDynamicLabel's logic للألوان أو نأخذ اللون مباشرة
-		infoBtn.setForeground(ThemeManager.getInstance().getTextColor());
+	    JPanel leftTop = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+	    leftTop.setOpaque(false);
+	    leftTop.add(p1Indicator);
+	    leftTop.add(playerALabel);
 
-		infoBtn.addActionListener(e -> {
-		    // التأكد מ-session
-		    Difficulty currentDiff = (session != null) ? session.getDifficulty() : Difficulty.EASY;
-		    new view.GameRulesDialog(
-		            SwingUtilities.getWindowAncestor(this),
-		            currentDiff
-		    ).setVisible(true);
-		});
+	    JPanel leftBottom = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+	    leftBottom.setOpaque(false);
+	    leftBottom.add(minesLeftALabel);
 
-		center.add(infoBtn);
-		
-		center.add(pauseBtn);
+	    left.add(leftTop);
+	    left.add(Box.createVerticalStrut(2));
+	    left.add(leftBottom);
 
-		p1Indicator = new TurnIndicator();
-		p2Indicator = new TurnIndicator();
+	    // RIGHT (Player B + mines left)
+	    JPanel right = new JPanel();
+	    right.setOpaque(false);
+	    right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
 
-		JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-		left.setOpaque(false);
-		left.add(p1Indicator);
-		left.add(playerALabel);
+	    JPanel rightTop = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+	    rightTop.setOpaque(false);
+	    rightTop.add(playerBLabel);
+	    rightTop.add(p2Indicator);
 
-		JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-		right.setOpaque(false);
-		right.add(playerBLabel);
-		right.add(p2Indicator);
+	    JPanel rightBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+	    rightBottom.setOpaque(false);
+	    rightBottom.add(minesLeftBLabel);
 
-		row.add(left, BorderLayout.WEST);
-		row.add(center, BorderLayout.CENTER);
-		row.add(right, BorderLayout.EAST);
+	    right.add(rightTop);
+	    right.add(Box.createVerticalStrut(2));
+	    right.add(rightBottom);
 
-		return row;
+	    // CENTER (Turn/Time + Info + Pause)  -- בלי Difficulty
+	    JPanel center = new JPanel();
+	    center.setOpaque(false);
+	    center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
+
+	    JPanel centerRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+	    centerRow.setOpaque(false);
+
+	    turnLabel = createDynamicLabel("Turn: " + player1Name, new Font("Segoe UI", Font.BOLD, 18));
+	    timeLabel = createDynamicLabel("Time: 00:00", new Font("Segoe UI", Font.BOLD, 18));
+
+	    // Pause
+	    pauseBtn = new PauseIconButton();
+	    pauseBtn.setToolTipText("Pause / Resume");
+	    pauseBtn.addActionListener(e -> togglePauseFromGUI());
+
+	    // Info button (Rules)
+	    JButton infoBtn = new JButton("ℹ️");
+	    infoBtn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20));
+	    infoBtn.setToolTipText("Game Rules & Info");
+	    infoBtn.setContentAreaFilled(false);
+	    infoBtn.setBorderPainted(false);
+	    infoBtn.setFocusPainted(false);
+	    infoBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+	    infoBtn.setForeground(ThemeManager.getInstance().getTextColor());
+
+	    infoBtn.addActionListener(e -> {
+	        Difficulty currentDiff = (session != null) ? session.getDifficulty() : Difficulty.EASY;
+	        new view.GameRulesDialog(
+	                SwingUtilities.getWindowAncestor(this),
+	                currentDiff
+	        ).setVisible(true);
+	    });
+
+	    centerRow.add(turnLabel);
+	    centerRow.add(Box.createHorizontalStrut(18));
+	    centerRow.add(timeLabel);
+	    centerRow.add(Box.createHorizontalStrut(10));
+	    centerRow.add(infoBtn);
+	    centerRow.add(Box.createHorizontalStrut(6));
+	    centerRow.add(pauseBtn);
+
+	    center.add(centerRow);
+
+	    row.add(left, BorderLayout.WEST);
+	    row.add(center, BorderLayout.CENTER);
+	    row.add(right, BorderLayout.EAST);
+
+	    return row;
 	}
 
 	private JPanel buildBoardsTitleRow() {
@@ -438,32 +486,46 @@ public class MinesweeperGUI extends JPanel {
 	}
 
 	private JPanel createLegendPanel() {
-		JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 0));
-		p.setOpaque(false);
 
-		p.add(makeLegendItem(new LegendIconChip(ICON_QUESTION, new Color(140, 190, 255, 90)), "Question"));
-		p.add(makeLegendItem(new LegendIconChip(ICON_SURPRISE, new Color(255, 170, 210, 90)), "Surprise"));
-		p.add(makeLegendItem(new LegendIconChip(ICON_MINE,     new Color(255, 120, 120, 85)), "Mine"));
+	    int gap = 18;
 
-		return p;
+	    JPanel grid = new JPanel(new GridLayout(1, 5, gap, 0));
+	    grid.setOpaque(false);
+
+	    grid.add(makeLegendItem(new LegendIconChip(ICON_QUESTION,      new Color(140, 190, 255, 90)), "Question"));
+	    grid.add(makeLegendItem(new LegendIconChip(ICON_SURPRISE,      new Color(255, 170, 210, 90)), "Surprise"));
+	    grid.add(makeLegendItem(new LegendIconChip(ICON_MINE,          new Color(255, 120, 120, 85)), "Mine"));
+	    grid.add(makeLegendItem(new LegendIconChip(ICON_QUESTION_USED, new Color(140, 190, 255, 90)), "Used Question"));
+	    grid.add(makeLegendItem(new LegendIconChip(ICON_SURPRISE_USED, new Color(255, 170, 210, 90)), "Used Surprise"));
+
+	    JPanel wrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+	    wrap.setOpaque(false);
+	    wrap.add(grid);
+
+	    return wrap;
 	}
 
 	private JPanel makeLegendItem(JComponent chip, String text) {
-		JPanel box = new JPanel();
-		box.setOpaque(false);
-		box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
+	    JPanel box = new JPanel();
+	    box.setOpaque(false);
+	    box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
 
-		chip.setAlignmentX(Component.CENTER_ALIGNMENT);
+	    box.setPreferredSize(new Dimension(78, 52));
+	    box.setMinimumSize(new Dimension(78, 52));
+	    box.setMaximumSize(new Dimension(78, 52));
 
-		JLabel lbl = new JLabel(text);
-		lbl.setAlignmentX(Component.CENTER_ALIGNMENT);
-		lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
-		lbl.setForeground(ThemeManager.getInstance().getTextColor());
+	    chip.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-		box.add(chip);
-		box.add(Box.createVerticalStrut(3));
-		box.add(lbl);
-		return box;
+	    JLabel lbl = new JLabel(text);
+	    lbl.setAlignmentX(Component.CENTER_ALIGNMENT);
+	    lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+	    lbl.setForeground(ThemeManager.getInstance().getTextColor());
+
+	    box.add(chip);
+	    box.add(Box.createVerticalStrut(3));
+	    box.add(lbl);
+
+	    return box;
 	}
 
 	// Overlay creation
@@ -579,58 +641,67 @@ public class MinesweeperGUI extends JPanel {
 		cardsHolder.setAlignmentY(0.5f);
 	}
 
-
 	// Board build + Pause
 	private JPanel buildSingleBoardPanel(Board board, boolean firstBoard) {
-		int rows = board.getRows();
-		int cols = board.getCols();
+	    int rows = board.getRows();
+	    int cols = board.getCols();
 
-		JPanel panel = new JPanel(new GridLayout(rows, cols));
-		panel.setOpaque(false);
+	    JPanel panel = new JPanel(new GridLayout(rows, cols));
+	    panel.setOpaque(false);
 
-		CellButton[][] buttons = new CellButton[rows][cols];
+	    int cell = switch (difficulty) {
+	        case EASY -> 46;
+	        case MEDIUM -> 34;
+	        case HARD -> 26;
+	    };
 
-		int fontSize = 24;
-		if (rows > 15) fontSize = 14;
-		else if (rows > 10) fontSize = 18;
+	    CellButton[][] buttons = new CellButton[rows][cols];
 
-		for (int r = 0; r < rows; r++) {
-			for (int c = 0; c < cols; c++) {
-				CellButton btn = new CellButton();
-				btn.setFocusPainted(false);
-				btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, fontSize));
+	    int fontSize = 24;
+	    if (rows > 15) fontSize = 14;
+	    else if (rows > 10) fontSize = 18;
 
-				final int row = r;
-				final int col = c;
-				final boolean isFirst = firstBoard;
+	    for (int r = 0; r < rows; r++) {
+	        for (int c = 0; c < cols; c++) {
+	            CellButton btn = new CellButton();
+	            btn.setFocusPainted(false);
+	            btn.setFont(new Font("Segoe UI Emoji", Font.BOLD, fontSize));
 
-				btn.addMouseListener(new MouseAdapter() {
-					@Override
-					public void mousePressed(MouseEvent e) {
-						if (controller == null) return;
-						if (controller.isPaused()) return;
-						if (isFirst != controller.isPlayer1Turn()) return;
+	            btn.setPreferredSize(new Dimension(cell, cell));
+	            btn.setMinimumSize(new Dimension(cell, cell));
+	            btn.setMaximumSize(new Dimension(cell, cell));
 
-						if (SwingUtilities.isLeftMouseButton(e)) {
-							controller.handleLeftClick(isFirst, row, col);
-						} else if (SwingUtilities.isRightMouseButton(e)) {
-							controller.handleRightClick(isFirst, row, col);
-						}
-					}
-				});
+	            final int row = r;
+	            final int col = c;
+	            final boolean isFirst = firstBoard;
 
-				panel.add(btn);
-				buttons[r][c] = btn;
-			}
-		}
+	            btn.addMouseListener(new MouseAdapter() {
+	                @Override
+	                public void mousePressed(MouseEvent e) {
+	                    if (controller == null) return;
+	                    if (controller.isPaused()) return;
+	                    if (isFirst != controller.isPlayer1Turn()) return;
 
-		if (firstBoard) buttons1 = buttons;
-		else buttons2 = buttons;
+	                    if (SwingUtilities.isLeftMouseButton(e)) {
+	                        controller.handleLeftClick(isFirst, row, col);
+	                    } else if (SwingUtilities.isRightMouseButton(e)) {
+	                        controller.handleRightClick(isFirst, row, col);
+	                    }
+	                }
+	            });
 
-		panel.setBorder(BorderFactory.createLineBorder(
-				ThemeManager.getInstance().getBoardBorderColor(), 4, true
-				));
-		return panel;
+	            panel.add(btn);
+	            buttons[r][c] = btn;
+	        }
+	    }
+
+	    if (firstBoard) buttons1 = buttons;
+	    else buttons2 = buttons;
+
+	    panel.setBorder(BorderFactory.createLineBorder(
+	            ThemeManager.getInstance().getBoardBorderColor(), 4, true
+	    ));
+	    return panel;
 	}
 
 	private void togglePauseFromGUI() {
@@ -738,27 +809,27 @@ public class MinesweeperGUI extends JPanel {
 
 		showResultOverlay(type, title, subtitle, seconds);
 	}
-	
+
 	public void showNotEnoughPointsOverlay(boolean isQuestionTile, int cost, int currentScore) {
 
-	    overlayUsingQuestionTheme = isQuestionTile;
+		overlayUsingQuestionTheme = isQuestionTile;
 
-	    if (overlayUsingQuestionTheme) {
-	        OverlayCardPanel.setTheme(OVERLAY_BLUE_BG, OVERLAY_BLUE_BORDER);
-	    } else {
-	        OverlayCardPanel.setTheme(OVERLAY_PINK_BG, OVERLAY_PINK_BORDER);
-	    }
+		if (overlayUsingQuestionTheme) {
+			OverlayCardPanel.setTheme(OVERLAY_BLUE_BG, OVERLAY_BLUE_BORDER);
+		} else {
+			OverlayCardPanel.setTheme(OVERLAY_PINK_BG, OVERLAY_PINK_BORDER);
+		}
 
-	    int need = Math.max(0, cost - currentScore);
+		int need = Math.max(0, cost - currentScore);
 
-	    String title = "NOT ENOUGH SCORE";
-	    String subtitle = "Need " + need + " pts to activate";
+		String title = "NOT ENOUGH SCORE";
+		String subtitle = "Need " + need + " pts to activate";
 
-	    ImageIcon sadIcon = overlayUsingQuestionTheme ? ICON_BLUE_BAD : ICON_BAD_HEART;
+		ImageIcon sadIcon = overlayUsingQuestionTheme ? ICON_BLUE_BAD : ICON_BAD_HEART;
 
-	    fitOverlayTitleToWidth(title, 340, 30, 18);
+		fitOverlayTitleToWidth(title, 340, 30, 18);
 
-	    showResultOverlayWithIcon(sadIcon, title, subtitle, 2);
+		showResultOverlayWithIcon(sadIcon, title, subtitle, 2);
 	}
 
 	public void playGiftRevealAndShowOverlay(boolean isFirstBoard, int r, int c,
@@ -899,6 +970,16 @@ public class MinesweeperGUI extends JPanel {
 			int overlaySeconds) {
 		playGiftCenterAndShowOverlay(type, title, subtitle, overlaySeconds, null);
 	}
+	
+	private int countTotalMines(Board b) {
+	    int count = 0;
+	    for (int r = 0; r < b.getRows(); r++) {
+	        for (int c = 0; c < b.getCols(); c++) {
+	            if (b.getCell(r, c).getType() == CellType.MINE) count++;
+	        }
+	    }
+	    return count;
+	}
 
 	public void refreshView() {
 		boolean p1Turn = (controller == null) || controller.isPlayer1Turn();
@@ -919,6 +1000,19 @@ public class MinesweeperGUI extends JPanel {
 		scoreChip.setText("Score: " + session.getScore());
 
 		updateTimeLabel();
+
+		// Mines left 
+		int totalMinesA = countTotalMines(board1);
+		int totalMinesB = countTotalMines(board2);
+		int revealedA   = countRevealedMines(board1);
+		int revealedB   = countRevealedMines(board2);
+
+		int minesLeftA = Math.max(0, totalMinesA - revealedA);
+		int minesLeftB = Math.max(0, totalMinesB - revealedB);
+
+		if (minesLeftALabel != null) minesLeftALabel.setText("Mines left: " + minesLeftA);
+		if (minesLeftBLabel != null) minesLeftBLabel.setText("Mines left: " + minesLeftB);
+
 		updateTurnIndicatorUI();
 	}
 
@@ -1014,14 +1108,17 @@ public class MinesweeperGUI extends JPanel {
 				case QUESTION -> {
 					if (cell.isPowerUsed()) {
 						btn.setIcon(null);
-						btn.setText("USED");
+						btn.setText("");
 						btn.setFill(usedGlass);
 						btn.setTextColor(textOnGlass);
-						btn.setFont(new Font("Segoe UI", Font.BOLD, Math.max(12, btn.getFont().getSize() - 6)));
+
+						// show broken question icon (instead of USED)
+						btn.setScaledIcon(ICON_QUESTION_USED);
+
 					} else {
 						btn.setIcon(null);
 						btn.setText("");
-						btn.setFill(questionGlass);     // ✅ light transparent blue
+						btn.setFill(questionGlass);
 						btn.setScaledIcon(ICON_QUESTION);
 						btn.setTextColor(Color.WHITE);
 					}
@@ -1030,14 +1127,17 @@ public class MinesweeperGUI extends JPanel {
 				case SURPRISE -> {
 					if (cell.isPowerUsed()) {
 						btn.setIcon(null);
-						btn.setText("USED");
+						btn.setText("");
 						btn.setFill(usedGlass);
 						btn.setTextColor(textOnGlass);
-						btn.setFont(new Font("Segoe UI", Font.BOLD, Math.max(12, btn.getFont().getSize() - 6)));
+
+						// show opened gift icon (instead of USED)
+						btn.setScaledIcon(ICON_SURPRISE_USED);
+
 					} else {
 						btn.setIcon(null);
 						btn.setText("");
-						btn.setFill(surpriseGlass);     // ✅ light transparent pink
+						btn.setFill(surpriseGlass);
 						btn.setScaledIcon(ICON_SURPRISE);
 						btn.setTextColor(Color.WHITE);
 					}
@@ -1241,48 +1341,48 @@ public class MinesweeperGUI extends JPanel {
 	}
 
 	private static class CloseIconButton extends JButton {
-	    private boolean hover = false;
-	    private boolean down  = false;
+		private boolean hover = false;
+		private boolean down  = false;
 
-	    CloseIconButton() {
-	        setPreferredSize(new Dimension(36, 36));
-	        setContentAreaFilled(false);
-	        setBorderPainted(false);
-	        setFocusPainted(false);
-	        setOpaque(false);
-	        setCursor(new Cursor(Cursor.HAND_CURSOR));
+		CloseIconButton() {
+			setPreferredSize(new Dimension(36, 36));
+			setContentAreaFilled(false);
+			setBorderPainted(false);
+			setFocusPainted(false);
+			setOpaque(false);
+			setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-	        addMouseListener(new MouseAdapter() {
-	            @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
-	            @Override public void mouseExited(MouseEvent e)  { hover = false; down = false; repaint(); }
-	            @Override public void mousePressed(MouseEvent e) { down = true; repaint(); }
-	            @Override public void mouseReleased(MouseEvent e){ down = false; repaint(); }
-	        });
-	    }
+			addMouseListener(new MouseAdapter() {
+				@Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+				@Override public void mouseExited(MouseEvent e)  { hover = false; down = false; repaint(); }
+				@Override public void mousePressed(MouseEvent e) { down = true; repaint(); }
+				@Override public void mouseReleased(MouseEvent e){ down = false; repaint(); }
+			});
+		}
 
-	    @Override
-	    protected void paintComponent(Graphics g) {
-	        Graphics2D g2 = (Graphics2D) g.create();
-	        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		@Override
+		protected void paintComponent(Graphics g) {
+			Graphics2D g2 = (Graphics2D) g.create();
+			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-	        int w = getWidth();
-	        int h = getHeight();
+			int w = getWidth();
+			int h = getHeight();
 
-	        // subtle hover highlight (rounded square, not circle)
-	        if (hover) {
-	            g2.setColor(new Color(255, 255, 255, down ? 70 : 40));
-	            g2.fillRoundRect(5, 5, w - 10, h - 10, 10, 10);
-	        }
+			// subtle hover highlight (rounded square, not circle)
+			if (hover) {
+				g2.setColor(new Color(255, 255, 255, down ? 70 : 40));
+				g2.fillRoundRect(5, 5, w - 10, h - 10, 10, 10);
+			}
 
-	        g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-	        g2.setColor(Color.WHITE);
+			g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g2.setColor(Color.WHITE);
 
-	        int pad = 12;
-	        g2.drawLine(pad, pad, w - pad, h - pad);
-	        g2.drawLine(w - pad, pad, pad, h - pad);
+			int pad = 12;
+			g2.drawLine(pad, pad, w - pad, h - pad);
+			g2.drawLine(w - pad, pad, pad, h - pad);
 
-	        g2.dispose();
-	    }
+			g2.dispose();
+		}
 	}
 
 	private static class PauseIconButton extends JButton {
