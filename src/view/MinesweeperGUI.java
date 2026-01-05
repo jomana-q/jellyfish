@@ -355,6 +355,28 @@ public class MinesweeperGUI extends JPanel {
 
 		center.add(turnLabel);
 		center.add(timeLabel);
+		
+		JButton infoBtn = new JButton("ℹ️");
+		infoBtn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20));
+		infoBtn.setToolTipText("Game Rules & Info");
+		infoBtn.setContentAreaFilled(false);
+		infoBtn.setBorderPainted(false);
+		infoBtn.setFocusPainted(false);
+		infoBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		// نستخدم createDynamicLabel's logic للألوان أو نأخذ اللون مباشرة
+		infoBtn.setForeground(ThemeManager.getInstance().getTextColor());
+
+		infoBtn.addActionListener(e -> {
+		    // التأكد מ-session
+		    Difficulty currentDiff = (session != null) ? session.getDifficulty() : Difficulty.EASY;
+		    new view.GameRulesDialog(
+		            SwingUtilities.getWindowAncestor(this),
+		            currentDiff
+		    ).setVisible(true);
+		});
+
+		center.add(infoBtn);
+		
 		center.add(pauseBtn);
 
 		p1Indicator = new TurnIndicator();
