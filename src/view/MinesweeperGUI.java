@@ -83,7 +83,12 @@ public class MinesweeperGUI extends JPanel {
 	// Gift overlay (full screen)
 	private JPanel cardsHolder;
 	private JPanel giftOverlay;      
-	private JLabel giftLabel;        
+	private JLabel giftLabel; 
+	
+	// Toast (small side message)
+	private JPanel toastPanel;
+	private JLabel toastLabel;
+	private Timer toastTimer;
 
 	// Icons (loaded from /images/)
 	private final ImageIcon ICON_QUESTION  = loadIcon("/images/Ques.png");
@@ -291,28 +296,64 @@ public class MinesweeperGUI extends JPanel {
 
 	// UI setup
 	private void initUI() {
-		setOpaque(false);
-		setLayout(new BorderLayout());
+	    setOpaque(false);
+	    setLayout(new BorderLayout());
 
-		JPanel mainPanel = buildMainPanel();
+	    JPanel mainPanel = buildMainPanel();
 
-		layeredPane = new JLayeredPane() {
-			@Override
-			public void doLayout() {
-				int w = getWidth();
-				int h = getHeight();
-				if (mainPanel != null) mainPanel.setBounds(0, 0, w, h);
-				if (overlayRoot != null) overlayRoot.setBounds(0, 0, w, h);
-			}
-		};
-		layeredPane.setLayout(null);
+	    layeredPane = new JLayeredPane() {
+	        @Override
+	        public void doLayout() {
+	            int w = getWidth();
+	            int h = getHeight();
+	            if (mainPanel != null) mainPanel.setBounds(0, 0, w, h);
+	            if (overlayRoot != null) overlayRoot.setBounds(0, 0, w, h);
 
-		layeredPane.add(mainPanel, JLayeredPane.DEFAULT_LAYER);
+	            if (toastPanel != null) {
+	                int tw = toastPanel.getWidth();
+	                int th = toastPanel.getHeight();
+	                if (tw <= 0 || th <= 0) { // safety (first layout)
+	                    Dimension d = toastPanel.getPreferredSize();
+	                    if (d != null) { tw = d.width; th = d.height; }
+	                }
+	                int x = w - tw - 20;
+	                int y = 90;
+	                toastPanel.setBounds(x, y, tw, th);
+	            }
+	        }
+	    };
+	    layeredPane.setLayout(null);
 
-		createOverlay();
-		layeredPane.add(overlayRoot, JLayeredPane.PALETTE_LAYER);
+	    layeredPane.add(mainPanel, JLayeredPane.DEFAULT_LAYER);
 
-		add(layeredPane, BorderLayout.CENTER);
+	    createOverlay();
+	    layeredPane.add(overlayRoot, JLayeredPane.PALETTE_LAYER);
+
+	    createToast();
+	    layeredPane.add(toastPanel, JLayeredPane.POPUP_LAYER);
+
+	    add(layeredPane, BorderLayout.CENTER);
+	}
+	
+	public void showToast(String msg) {
+	    showToast(msg, 1600); // default 1.6s
+	}
+
+	public void showToast(String msg, int millis) {
+	    if (toastPanel == null || toastLabel == null) return;
+
+	    toastLabel.setText((msg == null) ? "" : msg);
+	    toastPanel.setVisible(true);
+	    toastPanel.repaint();
+
+	    if (toastTimer != null && toastTimer.isRunning()) toastTimer.stop();
+	    toastTimer = new Timer(Math.max(300, millis), e -> {
+	        toastPanel.setVisible(false);
+	        toastPanel.repaint();
+	        ((Timer)e.getSource()).stop();
+	    });
+	    toastTimer.setRepeats(false);
+	    toastTimer.start();
 	}
 
 	private JPanel buildMainPanel() {
@@ -639,6 +680,39 @@ public class MinesweeperGUI extends JPanel {
 		giftOverlay.setAlignmentY(0.5f);
 		cardsHolder.setAlignmentX(0.5f);
 		cardsHolder.setAlignmentY(0.5f);
+	}
+	
+	private void createToast() {
+	    toastPanel = new JPanel() {
+	        @Override protected void paintComponent(Graphics g) {
+	            super.paintComponent(g);
+	            Graphics2D g2 = (Graphics2D) g.create();
+	            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+	            int w = getWidth(), h = getHeight();
+	            // glass background
+	            g2.setColor(new Color(10, 20, 35, 190));
+	            g2.fillRoundRect(0, 0, w, h, 14, 14);
+
+	            // subtle border
+	            g2.setColor(new Color(255, 255, 255, 90));
+	            g2.setStroke(new BasicStroke(1.5f));
+	            g2.drawRoundRect(1, 1, w - 3, h - 3, 14, 14);
+
+	            g2.dispose();
+	        }
+	    };
+	    toastPanel.setOpaque(false);
+	    toastPanel.setLayout(new BorderLayout());
+	    toastPanel.setVisible(false);
+
+	    toastLabel = new JLabel("", SwingConstants.CENTER);
+	    toastLabel.setFont(new Font("Segoe UI Emoji", Font.BOLD, 14));
+	    toastLabel.setForeground(Color.WHITE);
+	    toastLabel.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
+
+	    toastPanel.add(toastLabel, BorderLayout.CENTER);
+	    toastPanel.setPreferredSize(new Dimension(260, 44));
 	}
 
 	// Board build + Pause
