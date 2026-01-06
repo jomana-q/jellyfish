@@ -3,9 +3,10 @@ package view;
 import controller.MinesweeperController;
 import model.*;
 import model.ThemeManager;
-import view.LegendIconChip;
 
 import javax.swing.*;
+import javax.swing.border.Border;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -26,7 +27,6 @@ public class MinesweeperGUI extends JPanel {
 	private JTextPane overlaySub;
 	private JLabel overlayEmoji;
 	private JButton overlayCloseBtn;
-	private OverlayIcon overlayIcon;
 
 	private Timer overlayAutoHideTimer;
 	// Overlay theme state (used for Question result overlay)
@@ -79,6 +79,10 @@ public class MinesweeperGUI extends JPanel {
 	private JLabel scoreChip;
 	private JLabel minesLeftALabel;
 	private JLabel minesLeftBLabel;
+	private JPanel boardPanelA;
+	private JPanel boardPanelB;
+	private JPanel boardWrapA;
+	private JPanel boardWrapB;
 
 	// Gift overlay (full screen)
 	private JPanel cardsHolder;
@@ -376,11 +380,14 @@ public class MinesweeperGUI extends JPanel {
 		JPanel boardsContainer = new JPanel(new GridLayout(1, 2, gap, 0));
 		boardsContainer.setOpaque(false);
 
-		JPanel boardPanel1 = buildSingleBoardPanel(board1, true);
-		JPanel boardPanel2 = buildSingleBoardPanel(board2, false);
+		boardPanelA = buildSingleBoardPanel(board1, true);
+		boardPanelB = buildSingleBoardPanel(board2, false);
 
-		boardsContainer.add(boardPanel1);
-		boardsContainer.add(boardPanel2);
+		boardWrapA = new BoardMattePanel(boardPanelA);
+		boardWrapB = new BoardMattePanel(boardPanelB);
+
+		boardsContainer.add(boardWrapA);
+		boardsContainer.add(boardWrapB);
 
 		root.add(boardsContainer, BorderLayout.CENTER);
 		root.add(buildBottomBar(), BorderLayout.SOUTH);
@@ -772,9 +779,8 @@ public class MinesweeperGUI extends JPanel {
 	    if (firstBoard) buttons1 = buttons;
 	    else buttons2 = buttons;
 
-	    panel.setBorder(BorderFactory.createLineBorder(
-	            ThemeManager.getInstance().getBoardBorderColor(), 4, true
-	    ));
+	    panel.setBorder(BorderFactory.createEmptyBorder()); 
+
 	    return panel;
 	}
 
@@ -1088,6 +1094,7 @@ public class MinesweeperGUI extends JPanel {
 		if (minesLeftBLabel != null) minesLeftBLabel.setText("Mines left: " + minesLeftB);
 
 		updateTurnIndicatorUI();
+		applyBoardHighlight(p1Turn);
 	}
 
 	private void updateTurnIndicatorUI() {
@@ -1228,18 +1235,50 @@ public class MinesweeperGUI extends JPanel {
 				(int) (c.getBlue() * factor)
 				);
 	}
+	
+	private void applyBoardHighlight(boolean p1Active) {
+	    if (boardWrapA == null || boardWrapB == null) return;
+
+	    ThemeManager tm = ThemeManager.getInstance();
+	    Color a = tm.getBoardAColor();
+	    Color b = tm.getBoardBColor();
+
+	    // מסגרת רגילה (עדינה)
+	    Border normal = BorderFactory.createLineBorder(
+	            tm.isDarkMode() ? new Color(255,255,255,55) : new Color(0,0,0,45),
+	            2, true
+	    );
+
+	    // Glow לתור (מומלץ: 2 שכבות)
+	    Border glowA = BorderFactory.createCompoundBorder(
+	            BorderFactory.createLineBorder(new Color(a.getRed(), a.getGreen(), a.getBlue(), 230), 6, true),
+	            BorderFactory.createLineBorder(new Color(255, 255, 255, 90), 1, true)
+	    );
+
+	    Border glowB = BorderFactory.createCompoundBorder(
+	            BorderFactory.createLineBorder(new Color(b.getRed(), b.getGreen(), b.getBlue(), 230), 6, true),
+	            BorderFactory.createLineBorder(new Color(255, 255, 255, 90), 1, true)
+	    );
+
+	    boardWrapA.setBorder(p1Active ? glowA : normal);
+	    boardWrapB.setBorder(p1Active ? normal : glowB);
+
+	    boardWrapA.repaint();
+	    boardWrapB.repaint();
+	}
 
 	public void updateTurnHighlight() {
-		boolean p1Active = (controller == null) || controller.isPlayer1Turn();
-		boolean paused = controller != null && controller.isPaused();
+	    boolean p1Active = (controller == null) || controller.isPlayer1Turn();
+	    boolean paused = controller != null && controller.isPaused();
 
-		if (paused) {
-			setAllBoardsEnabled(false);
-		} else {
-			setBoardEnabled(buttons1, p1Active);
-			setBoardEnabled(buttons2, !p1Active);
-		}
-		updateTurnIndicatorUI();
+	    if (paused) {
+	        setAllBoardsEnabled(false);
+	    } else {
+	        setAllBoardsEnabled(true); // לא מכבים אף לוח
+	    }
+
+	    applyBoardHighlight(p1Active);
+	    updateTurnIndicatorUI();
 	}
 
 	// Game Over
@@ -1723,5 +1762,41 @@ public class MinesweeperGUI extends JPanel {
 		};
 		lbl.setFont(font);
 		return lbl;
+	}
+	
+	private static class BoardMattePanel extends JPanel {
+	    private final JComponent inner;
+
+	    BoardMattePanel(JComponent inner) {
+	        this.inner = inner;
+	        setOpaque(false);
+	        setLayout(new BorderLayout());
+	        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12)); // רווח מהקצוות
+	        add(inner, BorderLayout.CENTER);
+	    }
+
+	    @Override
+	    protected void paintComponent(Graphics g) {
+	        super.paintComponent(g);
+	        Graphics2D g2 = (Graphics2D) g.create();
+	        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+	        boolean dark = ThemeManager.getInstance().isDarkMode();
+	        Color bg = dark ? new Color(10, 18, 30, 160) : new Color(255, 255, 255, 170); // matte עדין
+	        Color border = dark ? new Color(255, 255, 255, 55) : new Color(0, 0, 0, 45);
+
+	        int arc = 18;
+	        int w = getWidth();
+	        int h = getHeight();
+
+	        g2.setColor(bg);
+	        g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
+
+	        g2.setColor(border);
+	        g2.setStroke(new BasicStroke(2f));
+	        g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
+
+	        g2.dispose();
+	    }
 	}
 }
