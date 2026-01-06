@@ -444,7 +444,7 @@ public class MinesweeperGUI extends JPanel {
 	    right.add(Box.createVerticalStrut(2));
 	    right.add(rightBottom);
 
-	    // CENTER (Turn/Time + Info + Pause)  -- בלי Difficulty
+	    // CENTER (Turn/Time + Info + Pause) 
 	    JPanel center = new JPanel();
 	    center.setOpaque(false);
 	    center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
@@ -461,14 +461,7 @@ public class MinesweeperGUI extends JPanel {
 	    pauseBtn.addActionListener(e -> togglePauseFromGUI());
 
 	    // Info button (Rules)
-	    JButton infoBtn = new JButton("ℹ️");
-	    infoBtn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20));
-	    infoBtn.setToolTipText("Game Rules & Info");
-	    infoBtn.setContentAreaFilled(false);
-	    infoBtn.setBorderPainted(false);
-	    infoBtn.setFocusPainted(false);
-	    infoBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-	    infoBtn.setForeground(ThemeManager.getInstance().getTextColor());
+	    JButton infoBtn = new InfoIconButton();
 
 	    infoBtn.addActionListener(e -> {
 	        Difficulty currentDiff = (session != null) ? session.getDifficulty() : Difficulty.EASY;
@@ -1243,13 +1236,11 @@ public class MinesweeperGUI extends JPanel {
 	    Color a = tm.getBoardAColor();
 	    Color b = tm.getBoardBColor();
 
-	    // מסגרת רגילה (עדינה)
 	    Border normal = BorderFactory.createLineBorder(
 	            tm.isDarkMode() ? new Color(255,255,255,55) : new Color(0,0,0,45),
 	            2, true
 	    );
 
-	    // Glow לתור (מומלץ: 2 שכבות)
 	    Border glowA = BorderFactory.createCompoundBorder(
 	            BorderFactory.createLineBorder(new Color(a.getRed(), a.getGreen(), a.getBlue(), 230), 6, true),
 	            BorderFactory.createLineBorder(new Color(255, 255, 255, 90), 1, true)
@@ -1795,6 +1786,59 @@ public class MinesweeperGUI extends JPanel {
 	        g2.setColor(border);
 	        g2.setStroke(new BasicStroke(2f));
 	        g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
+
+	        g2.dispose();
+	    }
+	}
+	
+	private static class InfoIconButton extends JButton {
+	    private boolean hover = false;
+	    private boolean down  = false;
+
+	    InfoIconButton() {
+	        setPreferredSize(new Dimension(34, 34));
+	        setMinimumSize(new Dimension(34, 34));
+	        setMaximumSize(new Dimension(34, 34));
+
+	        setToolTipText("Game Rules & Info");
+	        setFocusPainted(false);
+	        setBorderPainted(false);
+	        setContentAreaFilled(false);
+	        setOpaque(false);
+	        setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+	        addMouseListener(new MouseAdapter() {
+	            @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+	            @Override public void mouseExited(MouseEvent e)  { hover = false; down = false; repaint(); }
+	            @Override public void mousePressed(MouseEvent e) { down = true; repaint(); }
+	            @Override public void mouseReleased(MouseEvent e){ down = false; repaint(); }
+	        });
+	    }
+
+	    @Override
+	    protected void paintComponent(Graphics g) {
+	        Graphics2D g2 = (Graphics2D) g.create();
+	        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+	        int w = getWidth(), h = getHeight();
+
+	        // background circle (looks clickable)
+	        g2.setColor(new Color(20, 35, 55, down ? 255 : (hover ? 255 : 200)));
+	        g2.fillOval(0, 0, w, h);
+
+	        // border
+	        g2.setColor(new Color(255, 255, 255, hover ? 180 : 120));
+	        g2.setStroke(new BasicStroke(2f));
+	        g2.drawOval(1, 1, w - 3, h - 3);
+
+	        // draw "i"
+	        g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
+	        FontMetrics fm = g2.getFontMetrics();
+	        String s = "i";
+	        int x = (w - fm.stringWidth(s)) / 2;
+	        int y = (h - fm.getHeight()) / 2 + fm.getAscent();
+	        g2.setColor(Color.WHITE);
+	        g2.drawString(s, x, y);
 
 	        g2.dispose();
 	    }
