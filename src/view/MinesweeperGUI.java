@@ -29,6 +29,11 @@ public class MinesweeperGUI extends JPanel {
 	private JButton overlayCloseBtn;
 
 	private Timer overlayAutoHideTimer;
+	
+	// ضيفيهم بأول الملف مع باقي الـ private variables
+    private JLabel boardALabel;
+    private JLabel boardBLabel;
+ 
 	// Overlay theme state (used for Question result overlay)
 	private boolean overlayUsingQuestionTheme = false;
 
@@ -394,115 +399,122 @@ public class MinesweeperGUI extends JPanel {
 
 		return root;
 	}
-
 	private JPanel buildPlayersRow() {
-	    JPanel row = new JPanel(new BorderLayout());
-	    row.setOpaque(false);
+        // لوحة فارغة تستخدم BorderLayout لترتيب العناصر
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
 
-	    playerALabel = createDynamicLabel(player1Name, new Font("Segoe UI", Font.BOLD, 14));
-	    playerBLabel = createDynamicLabel(player2Name, new Font("Segoe UI", Font.BOLD, 14));
+        // --- الوسط (CENTER) ---
+        // يحتوي على: نص الدور، الوقت، زر المعلومات، وزر الإيقاف
+        JPanel center = new JPanel();
+        center.setOpaque(false);
+        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
 
-	    minesLeftALabel = createDynamicLabel("Mines left: 0", new Font("Segoe UI", Font.PLAIN, 16));
-	    minesLeftBLabel = createDynamicLabel("Mines left: 0", new Font("Segoe UI", Font.PLAIN, 16));
+        JPanel centerRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        centerRow.setOpaque(false);
 
-	    p1Indicator = new TurnIndicator();
-	    p2Indicator = new TurnIndicator();
+        // تعريف عناصر الوسط
+        turnLabel = createDynamicLabel("Turn: " + player1Name, new Font("Segoe UI", Font.BOLD, 18));
+        timeLabel = createDynamicLabel("Time: 00:00", new Font("Segoe UI", Font.BOLD, 18));
+        
+        pauseBtn = new PauseIconButton();
+        pauseBtn.setToolTipText("Pause / Resume");
+        pauseBtn.addActionListener(e -> togglePauseFromGUI());
 
-	    // LEFT (Player A + mines left)
-	    JPanel left = new JPanel();
-	    left.setOpaque(false);
-	    left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
+        JButton infoBtn = new InfoIconButton();
+        infoBtn.addActionListener(e -> {
+             Difficulty currentDiff = (session != null) ? session.getDifficulty() : Difficulty.EASY;
+             new view.GameRulesDialog(SwingUtilities.getWindowAncestor(this), currentDiff);
+        });
 
-	    JPanel leftTop = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-	    leftTop.setOpaque(false);
-	    leftTop.add(p1Indicator);
-	    leftTop.add(playerALabel);
+        // إضافة العناصر للوسط
+        centerRow.add(turnLabel);
+        centerRow.add(Box.createHorizontalStrut(18));
+        centerRow.add(timeLabel);
+        centerRow.add(Box.createHorizontalStrut(10));
+        centerRow.add(infoBtn);
+        centerRow.add(Box.createHorizontalStrut(6));
+        centerRow.add(pauseBtn);
 
-	    JPanel leftBottom = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-	    leftBottom.setOpaque(false);
-	    leftBottom.add(minesLeftALabel);
+        center.add(centerRow);
 
-	    left.add(leftTop);
-	    left.add(Box.createVerticalStrut(2));
-	    left.add(leftBottom);
+        // إضافة الوسط فقط للوحة الرئيسية (الجوانب فارغة الآن)
+        row.add(center, BorderLayout.CENTER);
 
-	    // RIGHT (Player B + mines left)
-	    JPanel right = new JPanel();
-	    right.setOpaque(false);
-	    right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
-
-	    JPanel rightTop = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-	    rightTop.setOpaque(false);
-	    rightTop.add(playerBLabel);
-	    rightTop.add(p2Indicator);
-
-	    JPanel rightBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-	    rightBottom.setOpaque(false);
-	    rightBottom.add(minesLeftBLabel);
-
-	    right.add(rightTop);
-	    right.add(Box.createVerticalStrut(2));
-	    right.add(rightBottom);
-
-	    // CENTER (Turn/Time + Info + Pause) 
-	    JPanel center = new JPanel();
-	    center.setOpaque(false);
-	    center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
-
-	    JPanel centerRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-	    centerRow.setOpaque(false);
-
-	    turnLabel = createDynamicLabel("Turn: " + player1Name, new Font("Segoe UI", Font.BOLD, 18));
-	    timeLabel = createDynamicLabel("Time: 00:00", new Font("Segoe UI", Font.BOLD, 18));
-
-	    // Pause
-	    pauseBtn = new PauseIconButton();
-	    pauseBtn.setToolTipText("Pause / Resume");
-	    pauseBtn.addActionListener(e -> togglePauseFromGUI());
-
-	    // Info button (Rules)
-	    JButton infoBtn = new InfoIconButton();
-
-	    infoBtn.addActionListener(e -> {
-	        Difficulty currentDiff = (session != null) ? session.getDifficulty() : Difficulty.EASY;
-	        new view.GameRulesDialog(
-	                SwingUtilities.getWindowAncestor(this),
-	                currentDiff
-	        ).setVisible(true);
-	    });
-
-	    centerRow.add(turnLabel);
-	    centerRow.add(Box.createHorizontalStrut(18));
-	    centerRow.add(timeLabel);
-	    centerRow.add(Box.createHorizontalStrut(10));
-	    centerRow.add(infoBtn);
-	    centerRow.add(Box.createHorizontalStrut(6));
-	    centerRow.add(pauseBtn);
-
-	    center.add(centerRow);
-
-	    row.add(left, BorderLayout.WEST);
-	    row.add(center, BorderLayout.CENTER);
-	    row.add(right, BorderLayout.EAST);
-
-	    return row;
-	}
-
+        return row;
+    }
+	
 	private JPanel buildBoardsTitleRow() {
-		JPanel row = new JPanel(new BorderLayout());
-		row.setOpaque(false);
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+        
+        p1Indicator = new TurnIndicator();
+        p2Indicator = new TurnIndicator();
 
-		JLabel boardALabel = createDynamicLabel("Board A", new Font("Segoe UI", Font.BOLD, 16));
-		JLabel boardBLabel = createDynamicLabel("Board B", new Font("Segoe UI", Font.BOLD, 16));
+        // (كودك القدים) تعريف الأسماء
+        // ملاحظة: تأكدي إنهم معرفים كـ Fields فوق عشان تقدري تغيريهم بعدين، أو اتركيهم هيك اذا بس للعرض
+        boardALabel = createDynamicLabel(player1Name + "'s Board", new Font("Segoe UI", Font.BOLD, 16));
+        boardBLabel = createDynamicLabel(player2Name + "'s Board", new Font("Segoe UI", Font.BOLD, 16));
 
-		JPanel legend = createLegendPanel();
+        // 👇👇👇 (إضافة 1) تعريف نصوص عدد القنابل 👇👇👇
+        minesLeftALabel = createDynamicLabel("Mines left: 0", new Font("Segoe UI", Font.PLAIN, 14));
+        minesLeftBLabel = createDynamicLabel("Mines left: 0", new Font("Segoe UI", Font.PLAIN, 14));
+        // لون رمادي فاتح عشان يتميز عن الاسم
+        minesLeftALabel.setForeground(new Color(220, 220, 220)); 
+        minesLeftBLabel.setForeground(new Color(220, 220, 220));
 
-		row.add(boardALabel, BorderLayout.WEST);
-		row.add(legend, BorderLayout.CENTER);
-		row.add(boardBLabel, BorderLayout.EAST);
 
-		return row;
-	}
+        // (كودك القدים) بانل الاسم والنقطة للاعب 1
+        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        leftPanel.setOpaque(false);
+        leftPanel.add(p1Indicator);  
+        leftPanel.add(boardALabel); 
+        
+        // (كودك القدים) بانل الاسم والنقطة للاعب 2
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        rightPanel.setOpaque(false);
+        rightPanel.add(boardBLabel);  
+        rightPanel.add(p2Indicator); 
+
+
+        // 👇👇👇 (إضافة 2) تجميع الاسم وتحته القنابل (Stacking) 👇👇👇
+
+        // --- تجهيز جهة اليسار (اللاعب 1) ---
+        JPanel p1Stack = new JPanel(new BorderLayout());
+        p1Stack.setOpaque(false);
+        p1Stack.add(leftPanel, BorderLayout.NORTH); // الاسم فوق (كودك)
+        
+        // بانل جديد للقنابل تحت الاسم
+        JPanel p1MinesPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 35, 0)); // 35 إزاحة عشان يجي تحت الاسم
+        p1MinesPanel.setOpaque(false);
+        p1MinesPanel.add(minesLeftALabel);
+        
+        p1Stack.add(p1MinesPanel, BorderLayout.SOUTH); // القنابل تحت
+
+
+        // --- تجهيز جهة اليمين (اللاعب 2) ---
+        JPanel p2Stack = new JPanel(new BorderLayout());
+        p2Stack.setOpaque(false);
+        p2Stack.add(rightPanel, BorderLayout.NORTH); // الاسم فوق (كودك)
+
+        // بانل جديد للقنابل تحت الاسم
+        JPanel p2MinesPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 35, 0)); 
+        p2MinesPanel.setOpaque(false);
+        p2MinesPanel.add(minesLeftBLabel);
+
+        p2Stack.add(p2MinesPanel, BorderLayout.SOUTH); // القنابل تحت
+
+
+        // (كودك القدים) اللجند والترتيب النهائي
+        JPanel legend = createLegendPanel();
+
+        // 👇 التغيير الوحيد هون: ضفنا الـ Stack بدل الـ Panel العادي
+        row.add(p1Stack, BorderLayout.WEST);
+        row.add(legend, BorderLayout.CENTER);
+        row.add(p2Stack, BorderLayout.EAST);
+
+        return row;
+    }
 
 	private JPanel buildBottomBar() {
 		JPanel bottom = new JPanel(new BorderLayout());
