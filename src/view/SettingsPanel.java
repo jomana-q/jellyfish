@@ -130,11 +130,11 @@ public class SettingsPanel extends JPanel {
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
         buttonsPanel.setOpaque(false);
 
-        saveBtn = new JButton("Save Changes ✅");
-        styleButton(saveBtn, new Color(60, 140, 60)); // ירוק
+        saveBtn = new JButton("Save Changes");
+        styleButton(saveBtn, new Color(80, 120, 220)); 
 
-        backBtn = new JButton("Back 🔙");
-        styleButton(backBtn, new Color(180, 60, 60)); // אדום
+        backBtn = new JButton("Back");
+        styleButton(backBtn, new Color(70, 80, 100)); // אדום
 
         buttonsPanel.add(saveBtn);
         buttonsPanel.add(backBtn);

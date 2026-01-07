@@ -107,8 +107,7 @@ public class MainMenuGUI extends JFrame {
 			@Override
 			public void paintComponent(Graphics g) {
 				// ⭐ עדכון צבע אוטומטי
-				Color themeColor = model.ThemeManager.getInstance().getTextColor();
-				if (!getForeground().equals(themeColor)) {
+				Color themeColor = Color.WHITE;				if (!getForeground().equals(themeColor)) {
 					setForeground(themeColor);
 				}
 
