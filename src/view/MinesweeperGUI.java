@@ -400,12 +400,9 @@ public class MinesweeperGUI extends JPanel {
 		return root;
 	}
 	private JPanel buildPlayersRow() {
-        // لوحة فارغة تستخدم BorderLayout لترتيب العناصر
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
 
-        // --- الوسط (CENTER) ---
-        // يحتوي على: نص الدور، الوقت، زر المعلومات، وزر الإيقاف
         JPanel center = new JPanel();
         center.setOpaque(false);
         center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
@@ -413,7 +410,6 @@ public class MinesweeperGUI extends JPanel {
         JPanel centerRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         centerRow.setOpaque(false);
 
-        // تعريف عناصر الوسط
         turnLabel = createDynamicLabel("Turn: " + player1Name, new Font("Segoe UI", Font.BOLD, 18));
         timeLabel = createDynamicLabel("Time: 00:00", new Font("Segoe UI", Font.BOLD, 18));
         
@@ -427,7 +423,6 @@ public class MinesweeperGUI extends JPanel {
              new view.GameRulesDialog(SwingUtilities.getWindowAncestor(this), currentDiff);
         });
 
-        // إضافة العناصر للوسط
         centerRow.add(turnLabel);
         centerRow.add(Box.createHorizontalStrut(18));
         centerRow.add(timeLabel);
@@ -438,7 +433,6 @@ public class MinesweeperGUI extends JPanel {
 
         center.add(centerRow);
 
-        // إضافة الوسط فقط للوحة الرئيسية (الجوانب فارغة الآن)
         row.add(center, BorderLayout.CENTER);
 
         return row;
@@ -451,64 +445,49 @@ public class MinesweeperGUI extends JPanel {
         p1Indicator = new TurnIndicator();
         p2Indicator = new TurnIndicator();
 
-        // (كودك القدים) تعريف الأسماء
-        // ملاحظة: تأكدي إنهم معرفים كـ Fields فوق عشان تقدري تغيريهم بعدين، أو اتركيهم هيك اذا بس للعرض
         boardALabel = createDynamicLabel(player1Name + "'s Board", new Font("Segoe UI", Font.BOLD, 16));
         boardBLabel = createDynamicLabel(player2Name + "'s Board", new Font("Segoe UI", Font.BOLD, 16));
 
-        // 👇👇👇 (إضافة 1) تعريف نصوص عدد القنابل 👇👇👇
         minesLeftALabel = createDynamicLabel("Mines left: 0", new Font("Segoe UI", Font.PLAIN, 14));
         minesLeftBLabel = createDynamicLabel("Mines left: 0", new Font("Segoe UI", Font.PLAIN, 14));
-        // لون رمادي فاتح عشان يتميز عن الاسم
         minesLeftALabel.setForeground(new Color(220, 220, 220)); 
         minesLeftBLabel.setForeground(new Color(220, 220, 220));
 
 
-        // (كودك القدים) بانل الاسم والنقطة للاعب 1
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         leftPanel.setOpaque(false);
         leftPanel.add(p1Indicator);  
         leftPanel.add(boardALabel); 
         
-        // (كودك القدים) بانل الاسم والنقطة للاعب 2
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         rightPanel.setOpaque(false);
         rightPanel.add(boardBLabel);  
         rightPanel.add(p2Indicator); 
 
 
-        // 👇👇👇 (إضافة 2) تجميع الاسم وتحته القنابل (Stacking) 👇👇👇
 
-        // --- تجهيز جهة اليسار (اللاعب 1) ---
         JPanel p1Stack = new JPanel(new BorderLayout());
         p1Stack.setOpaque(false);
-        p1Stack.add(leftPanel, BorderLayout.NORTH); // الاسم فوق (كودك)
+        p1Stack.add(leftPanel, BorderLayout.NORTH); 
         
-        // بانل جديد للقنابل تحت الاسم
-        JPanel p1MinesPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 35, 0)); // 35 إزاحة عشان يجي تحت الاسم
+        JPanel p1MinesPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 35, 0));
         p1MinesPanel.setOpaque(false);
         p1MinesPanel.add(minesLeftALabel);
         
-        p1Stack.add(p1MinesPanel, BorderLayout.SOUTH); // القنابل تحت
+        p1Stack.add(p1MinesPanel, BorderLayout.SOUTH); 
 
-
-        // --- تجهيز جهة اليمين (اللاعب 2) ---
         JPanel p2Stack = new JPanel(new BorderLayout());
         p2Stack.setOpaque(false);
-        p2Stack.add(rightPanel, BorderLayout.NORTH); // الاسم فوق (كودك)
+        p2Stack.add(rightPanel, BorderLayout.NORTH); 
 
-        // بانل جديد للقنابل تحت الاسم
         JPanel p2MinesPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 35, 0)); 
         p2MinesPanel.setOpaque(false);
         p2MinesPanel.add(minesLeftBLabel);
 
-        p2Stack.add(p2MinesPanel, BorderLayout.SOUTH); // القنابل تحت
+        p2Stack.add(p2MinesPanel, BorderLayout.SOUTH); 
 
-
-        // (كودك القدים) اللجند والترتيب النهائي
         JPanel legend = createLegendPanel();
 
-        // 👇 التغيير الوحيد هون: ضفنا الـ Stack بدل الـ Panel العادي
         row.add(p1Stack, BorderLayout.WEST);
         row.add(legend, BorderLayout.CENTER);
         row.add(p2Stack, BorderLayout.EAST);
