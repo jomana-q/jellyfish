@@ -16,7 +16,7 @@ public class SettingsPanel extends JPanel {
     // רכיבי הממשק (GUI Components)
     private JSlider volumeSlider;
     private JCheckBox muteCheckBox;
-    private JComboBox<String> themeBox;
+    private JButton themeToggle; // כפתור להחלפת ערכת נושא (Toggle)
     private JButton selectMusicBtn; // כפתור לבחירת מוזיקה מהמחשב
     private JButton saveBtn;
     private JButton backBtn;
@@ -94,15 +94,30 @@ public class SettingsPanel extends JPanel {
             SoundManager.getInstance().setMuted(muteCheckBox.isSelected());
         });
 
-        // --- D. ערכת נושא (Theme) ---
-     // --- D. הגדרות ערכת נושא (Theme) ---
+     // --- D. ערכת נושא (Theme) ---
         JLabel themeLabel = new JLabel("Game Theme 🎨:");
         styleLabel(themeLabel);
+
+        // יצירת כפתור טוגל (Toggle) במקום רשימה נפתחת
+        themeToggle = new JButton();
+        themeToggle.setFont(new Font("Segoe UI Emoji", Font.BOLD, 14));
+        themeToggle.setFocusPainted(false);
+        themeToggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // קבלת המצב הנוכחי מהמנהל (ThemeManager)
+        boolean currentMode = model.ThemeManager.getInstance().isDarkMode();
         
-        // ⭐ שינוי: רק שתי אפשרויות (כהה ובהיר)
-        String[] themes = {"Dark Mode 🌙", "Light Mode ☀️"};
-        themeBox = new JComboBox<>(themes);
-        themeBox.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
+        // עדכון עיצוב הכפתור בהתאם למצב ההתחלתי
+        updateThemeButtonLook(themeToggle, currentMode);
+
+        // מאזין ללחיצה על הכפתור - שינוי חזותי בלבד
+        themeToggle.addActionListener(e -> {
+            // בדיקה האם המצב כרגע הוא "כהה" לפי הטקסט
+            boolean isCurrentlyDark = themeToggle.getText().contains("Dark");
+            
+            // הפיכת המצב (אם כהה -> להפוך לבהיר, ולהפך)
+            updateThemeButtonLook(themeToggle, !isCurrentlyDark);
+        });
         
         // הוספת הרכיבים לתוך ה-Grid
         gbc.gridx = 0; gbc.gridy = 0;
@@ -121,8 +136,8 @@ public class SettingsPanel extends JPanel {
         gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 1;
         cardPanel.add(themeLabel, gbc);
         gbc.gridx = 1;
-        cardPanel.add(themeBox, gbc);
-
+        cardPanel.add(themeToggle, gbc); // הוספת כפתור הטוגל לפאנל
+        
         centerWrapper.add(cardPanel);
         add(centerWrapper, BorderLayout.CENTER);
 
@@ -146,8 +161,7 @@ public class SettingsPanel extends JPanel {
      // שמירה ועדכון הת'ים
         saveBtn.addActionListener(e -> {
             // בדיקה מה המשתמש בחר: אינדקס 0 = Dark, אינדקס 1 = Light
-            boolean isDark = (themeBox.getSelectedIndex() == 0);
-            
+        	boolean isDark = themeToggle.getText().contains("Dark");            
             // עדכון המנהל (ThemeManager)
             model.ThemeManager.getInstance().setDarkMode(isDark);
             
@@ -204,5 +218,31 @@ public class SettingsPanel extends JPanel {
         btn.setFocusPainted(false);
         btn.setBorder(BorderFactory.createEmptyBorder(10, 25, 10, 25));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+    
+    /**
+     * פונקציית עזר לעדכון עיצוב כפתור הערכה (Dark/Light)
+     * משנה את הטקסט והצבעים בהתאם למצב הנבחר.
+     */
+    private void updateThemeButtonLook(JButton btn, boolean isDark) {
+        if (isDark) {
+            // עיצוב עבור מצב כהה (Dark Mode) 🌙
+            btn.setText("Dark Mode 🌙");
+            btn.setBackground(new Color(60, 60, 80)); // כחול כהה
+            btn.setForeground(new Color(220, 220, 255)); // טקסט בהיר
+            btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 100, 150), 1),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15)
+            ));
+        } else {
+            // עיצוב עבור מצב בהיר (Light Mode) ☀️
+            btn.setText("Light Mode ☀️");
+            btn.setBackground(new Color(255, 250, 240)); // לבן שמנת
+            btn.setForeground(new Color(220, 110, 160));   // כתום/זהב
+            btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(240, 180, 210), 1),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15)
+            ));
+        }
     }
 }
