@@ -399,7 +399,9 @@ public class MinesweeperGUI extends JPanel {
 
 		return root;
 	}
+	
 	private JPanel buildPlayersRow() {
+		
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
 
@@ -417,11 +419,16 @@ public class MinesweeperGUI extends JPanel {
         pauseBtn.setToolTipText("Pause / Resume");
         pauseBtn.addActionListener(e -> togglePauseFromGUI());
 
-        JButton infoBtn = new InfoIconButton();
-        infoBtn.addActionListener(e -> {
-             Difficulty currentDiff = (session != null) ? session.getDifficulty() : Difficulty.EASY;
-             new view.GameRulesDialog(SwingUtilities.getWindowAncestor(this), currentDiff);
-        });
+        // Info button (Rules)
+	    JButton infoBtn = new InfoIconButton();
+
+	    infoBtn.addActionListener(e -> {
+	        Difficulty currentDiff = (session != null) ? session.getDifficulty() : Difficulty.EASY;
+	        new view.GameRulesDialog(
+	                SwingUtilities.getWindowAncestor(this),
+	                currentDiff
+	        ).setVisible(true);
+	    });
 
         centerRow.add(turnLabel);
         centerRow.add(Box.createHorizontalStrut(18));
