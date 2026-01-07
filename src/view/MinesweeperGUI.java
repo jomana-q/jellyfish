@@ -1493,7 +1493,7 @@ public class MinesweeperGUI extends JPanel {
 		private boolean paused = false;
 
 		PauseIconButton() {
-			setPreferredSize(new Dimension(54, 34));
+			setPreferredSize(new Dimension(54, 34)); 
 			setContentAreaFilled(false);
 			setBorderPainted(false);
 			setFocusPainted(false);
@@ -1524,14 +1524,16 @@ public class MinesweeperGUI extends JPanel {
 			int cx = (w - d) / 2;
 			int cy = (h - d) / 2;
 
-			g2.setColor(new Color(220, 40, 40));
+			
+			g2.setColor(new Color(120, 100, 230)); 
 			g2.fillOval(cx, cy, d, d);
 
 			g2.setColor(new Color(255, 255, 255, 200));
 			g2.setStroke(new BasicStroke(2f));
 			g2.drawOval(cx, cy, d, d);
 
-			g2.setColor(Color.BLACK);
+			g2.setColor(Color.WHITE); 
+			
 			int innerX = cx + d / 3;
 			int innerY = cy + d / 4;
 			int barW = d / 8;
@@ -1624,8 +1626,7 @@ public class MinesweeperGUI extends JPanel {
 			resume.setAlignmentX(Component.CENTER_ALIGNMENT);
 			resume.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20)); // פונט גדול וברור
 			resume.setForeground(Color.WHITE);
-			resume.setBackground(new Color(40, 160, 80)); // ירוק כהה ועמוק
-			resume.setFocusPainted(false);
+			resume.setBackground(new Color(80, 120, 220)); 
 			resume.setCursor(new Cursor(Cursor.HAND_CURSOR));
 			// הגדלת הכפתור התחתון לרוחב כמעט מלא
 			// שימוש במשתנים שהגדרנו למעלה כדי לשלוט בגודל הכפתור
