@@ -106,15 +106,16 @@ public class QuestionDialog {
         left.add(icon);
         left.add(title);
 
-        // right (timer + close)
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+     // right (level + timer + close)
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
-        right.setPreferredSize(new Dimension(180, 42));
+        right.setPreferredSize(new Dimension(270, 42)); // was 180 -> caused wrapping
 
-        TimeChip timeChip = new TimeChip(TOTAL_SECONDS);
-        CloseIconButton close = new CloseIconButton();
-        close.setPreferredSize(new Dimension(36, 36));
+        LevelChip levelChip = new LevelChip(levelLabel(q.getLevel()));
+        TimeChip timeChip   = new TimeChip(TOTAL_SECONDS);
+        CloseIconButton close = new CloseIconButton(); // keep default size (34x34)
 
+        right.add(levelChip);
         right.add(timeChip);
         right.add(close);
 
@@ -357,8 +358,8 @@ public class QuestionDialog {
 
         TimeChip(int seconds) {
             this.seconds = seconds;
-            setPreferredSize(new Dimension(110, 34));
-            setMinimumSize(new Dimension(110, 34));
+            setPreferredSize(new Dimension(92, 34));
+            setMinimumSize(new Dimension(92, 34));
             setOpaque(false);
             setToolTipText("Time left");
         }
@@ -712,6 +713,54 @@ public class QuestionDialog {
 
             g2.setColor(new Color(70, 140, 210, 200));
             g2.fillRoundRect(pad, 3, Math.max(0, fw), 5, 8, 8);
+
+            g2.dispose();
+        }
+    }
+    
+    private static String levelLabel(model.QuestionLevel lvl) {
+        if (lvl == null) return "LEVEL";
+        return switch (lvl) {
+            case EASY -> "EASY";
+            case MEDIUM -> "MEDIUM";
+            case HARD -> "HARD";
+            case EXPERT -> "EXPERT";
+        };
+    }
+    
+    private static class LevelChip extends JComponent {
+        private final String text;
+
+        LevelChip(String text) {
+            this.text = (text == null) ? "" : text.trim();
+            setPreferredSize(new Dimension(92, 34));
+            setMinimumSize(new Dimension(92, 34));
+            setOpaque(false);
+            setToolTipText("Question level");
+        }
+
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            applyTextHints(g2);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+
+            g2.setColor(new Color(255, 255, 255, 190));
+            g2.fillRoundRect(0, 0, w - 1, h - 1, 18, 18);
+
+            g2.setColor(new Color(120, 175, 230, 150));
+            understandingStroke(g2, 1.5f);
+            g2.drawRoundRect(1, 1, w - 3, h - 3, 18, 18);
+
+            g2.setFont(FONT_SMALL);
+            FontMetrics fm = g2.getFontMetrics();
+            int tx = (w - fm.stringWidth(text)) / 2;
+            int ty = (h - fm.getHeight()) / 2 + fm.getAscent();
+
+            g2.setColor(TITLE_TXT);
+            g2.drawString(text, tx, ty);
 
             g2.dispose();
         }
