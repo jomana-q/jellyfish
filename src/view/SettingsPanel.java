@@ -1,28 +1,36 @@
 package view;
 
 import controller.SoundManager;
+
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Style;
+
+
+
 import java.awt.*;
-import java.io.File;
+
+
 
 /**
- * מסך הגדרות (Settings) - מאפשר שליטה בווליום, בחירת קובץ מוזיקה, השתקה ושינוי ערכת נושא.
+ * מסך הגדרות (Settings)
+ * מאפשר שליטה בווליום, השתקה ושינוי ערכת נושא.
  */
 public class SettingsPanel extends JPanel {
 
     private final MainMenuGUI parent;
-    
-    // רכיבי הממשק (GUI Components)
+
+    // GUI Components
     private JSlider volumeSlider;
     private JCheckBox muteCheckBox;
-    private JButton themeToggle; // כפתור להחלפת ערכת נושא (Toggle)
-    private JButton selectMusicBtn; // כפתור לבחירת מוזיקה מהמחשב
+    private JComboBox<String> themeBox;
     private JButton saveBtn;
     private JButton backBtn;
 
-    // הפאנל הפנימי (הרקע השקוף) - נשמר כמשתנה כדי שנוכל לרענן אותו
-    private JPanel cardPanel; 
+    // פנל פנימי (כרטיס שקוף)
+    private JPanel cardPanel;
 
     public SettingsPanel(MainMenuGUI parent) {
         this.parent = parent;
@@ -34,17 +42,16 @@ public class SettingsPanel extends JPanel {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(40, 80, 40, 80));
 
-        // 1. כותרת העמוד
+        // כותרת
         JLabel title = new JLabel("Settings ⚙️", SwingConstants.CENTER);
         title.setForeground(Color.WHITE);
         title.setFont(new Font("Segoe UI Emoji", Font.BOLD, 32));
         add(title, BorderLayout.NORTH);
 
-        // 2. אזור המרכז (מעטפת)
+        // מרכז
         JPanel centerWrapper = new JPanel(new GridBagLayout());
         centerWrapper.setOpaque(false);
-        
-        // הכרטיס השקוף שבו יושבים הכפתורים
+
         cardPanel = new JPanel(new GridBagLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -53,152 +60,115 @@ public class SettingsPanel extends JPanel {
                 super.paintComponent(g);
             }
         };
-        
-        cardPanel.setOpaque(false); 
-        cardPanel.setBackground(new Color(0, 0, 0, 150));  
+
+        cardPanel.setOpaque(false);
+        cardPanel.setBackground(new Color(0, 0, 0, 150));
         cardPanel.setBorder(BorderFactory.createLineBorder(new Color(255, 255, 255, 50), 1, true));
-        
+
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 15, 15, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
-        // --- A. הגדרות שמע (Volume) ---
+        // --- A. Volume ---
         JLabel volumeLabel = new JLabel("Music Volume 🔊:");
         styleLabel(volumeLabel);
-        
+
         volumeSlider = new JSlider(0, 100, 50);
         volumeSlider.setOpaque(false);
         volumeSlider.setForeground(Color.WHITE);
         volumeSlider.setMajorTickSpacing(25);
         volumeSlider.setPaintTicks(true);
-        
-        // הוספת מאזין לשינוי הווליום + תיקון הבעיה הגרפית (repaint)
+
         volumeSlider.addChangeListener(e -> {
             SoundManager.getInstance().setVolume(volumeSlider.getValue());
-            cardPanel.repaint(); // תיקון קריטי: מונע מריחות בגרפיקה
+            cardPanel.repaint();
         });
 
-        // --- B. בחירת מוזיקה אישית ---
-        JLabel customMusicLabel = new JLabel("Custom Music 🎵:");
-        styleLabel(customMusicLabel);
-
-        selectMusicBtn = new JButton("Choose File... 📂");
-        styleButton(selectMusicBtn, new Color(70, 130, 180)); // כחול
-        selectMusicBtn.addActionListener(e -> chooseMusicFile());
-
-        // --- C. השתקה (Mute) ---
+        // --- B. Mute ---
         muteCheckBox = new JCheckBox("Mute All Sounds 🔇");
         styleCheckBox(muteCheckBox);
-        muteCheckBox.addActionListener(e -> {
-            SoundManager.getInstance().setMuted(muteCheckBox.isSelected());
-        });
+        muteCheckBox.addActionListener(e ->
+                SoundManager.getInstance().setMuted(muteCheckBox.isSelected())
+        );
 
-     // --- D. ערכת נושא (Theme) ---
+        // --- C. Theme ---
         JLabel themeLabel = new JLabel("Game Theme 🎨:");
         styleLabel(themeLabel);
 
-        // יצירת כפתור טוגל (Toggle) במקום רשימה נפתחת
-        themeToggle = new JButton();
-        themeToggle.setFont(new Font("Segoe UI Emoji", Font.BOLD, 14));
-        themeToggle.setFocusPainted(false);
-        themeToggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        String[] themes = {"Dark Mode 🌙", "Light Mode ☀️"};
+        themeBox = new JComboBox<>(themes);
+        themeBox.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
 
-        // קבלת המצב הנוכחי מהמנהל (ThemeManager)
-        boolean currentMode = model.ThemeManager.getInstance().isDarkMode();
-        
-        // עדכון עיצוב הכפתור בהתאם למצב ההתחלתי
-        updateThemeButtonLook(themeToggle, currentMode);
-
-        // מאזין ללחיצה על הכפתור - שינוי חזותי בלבד
-        themeToggle.addActionListener(e -> {
-            // בדיקה האם המצב כרגע הוא "כהה" לפי הטקסט
-            boolean isCurrentlyDark = themeToggle.getText().contains("Dark");
-            
-            // הפיכת המצב (אם כהה -> להפוך לבהיר, ולהפך)
-            updateThemeButtonLook(themeToggle, !isCurrentlyDark);
-        });
-        
-        // הוספת הרכיבים לתוך ה-Grid
-        gbc.gridx = 0; gbc.gridy = 0;
+        // הוספת רכיבים לגריד
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 1;
         cardPanel.add(volumeLabel, gbc);
+
         gbc.gridx = 1;
         cardPanel.add(volumeSlider, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 1;
-        cardPanel.add(customMusicLabel, gbc);
-        gbc.gridx = 1;
-        cardPanel.add(selectMusicBtn, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
         cardPanel.add(muteCheckBox, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 1;
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 1;
         cardPanel.add(themeLabel, gbc);
+
         gbc.gridx = 1;
-        cardPanel.add(themeToggle, gbc); // הוספת כפתור הטוגל לפאנל
+        cardPanel.add(themeBox, gbc); // הוספת כפתור הטוגל לפאנל
         
         centerWrapper.add(cardPanel);
         add(centerWrapper, BorderLayout.CENTER);
 
-        // 3. כפתורים למטה (Save / Back)
+        // כפתורים למטה
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
         buttonsPanel.setOpaque(false);
 
-        saveBtn = new JButton("Save Changes");
-        styleButton(saveBtn, new Color(80, 120, 220)); 
+        saveBtn = new JButton("Save Changes ✅");
+        styleButton(saveBtn, new Color(60, 140, 60));
 
-        backBtn = new JButton("Back");
-        styleButton(backBtn, new Color(70, 80, 100)); // אדום
+        backBtn = new JButton("Back 🔙");
+        styleButton(backBtn, new Color(180, 60, 60));
+
+        // 🔹 כפתור דף העזרה
+        JButton helpBtn = new JButton("Game Help ❔");
+        styleButton(helpBtn, new Color(70, 120, 200));
 
         buttonsPanel.add(saveBtn);
         buttonsPanel.add(backBtn);
-
+        buttonsPanel.add(helpBtn);
         add(buttonsPanel, BorderLayout.SOUTH);
 
-        // לוגיקת כפתורים
+        // פעולות
         backBtn.addActionListener(e -> parent.showMainMenu());
-     // שמירה ועדכון הת'ים
+
         saveBtn.addActionListener(e -> {
-            // בדיקה מה המשתמש בחר: אינדקס 0 = Dark, אינדקס 1 = Light
-        	boolean isDark = themeToggle.getText().contains("Dark");            
-            // עדכון המנהל (ThemeManager)
+            boolean isDark = (themeBox.getSelectedIndex() == 0);
+
             model.ThemeManager.getInstance().setDarkMode(isDark);
-            
-            // הודעה למשתמש
-            JOptionPane.showMessageDialog(this, "Settings Saved! \nההגדרות נשמרו בהצלחה! ✅");
-            
-            // ⭐ קריאה לפונקציה בחלון הראשי שתרענן את הצבעים
-            parent.refreshTheme(); 
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Settings Saved! \nההגדרות נשמרו בהצלחה! ✅"
+            );
+
+            parent.refreshTheme();
             parent.showMainMenu();
+        });
+
+        // פתיחת דף העזרה
+        helpBtn.addActionListener(e -> {
+            HelpDialog dlg = new HelpDialog();
+            dlg.setVisible(true);
         });
     }
 
-    /**
-     * פונקציה לפתיחת חלון בחירת קובץ מוזיקה (WAV בלבד).
-     */
-    private void chooseMusicFile() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Select Background Music (.wav)");
-        
-        // סינון קבצים - הצגת קבצי WAV בלבד
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("WAV Sound Files", "wav");
-        fileChooser.setFileFilter(filter);
-
-        int result = fileChooser.showOpenDialog(this);
-        
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File selectedFile = fileChooser.getSelectedFile();
-            
-            // הפעלת השיר הנבחר
-            SoundManager.getInstance().stopMusic(); 
-            SoundManager.getInstance().playBackgroundMusic(selectedFile.getAbsolutePath());
-            
-            JOptionPane.showMessageDialog(this, "Now Playing: \n" + selectedFile.getName() + " 🎶");
-        }
-    }
-
-    // פונקציות עזר לעיצוב
+    // Helpers לעיצוב
     private void styleLabel(JLabel lbl) {
         lbl.setForeground(Color.WHITE);
         lbl.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
@@ -219,30 +189,161 @@ public class SettingsPanel extends JPanel {
         btn.setBorder(BorderFactory.createEmptyBorder(10, 25, 10, 25));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
-    
-    /**
-     * פונקציית עזר לעדכון עיצוב כפתור הערכה (Dark/Light)
-     * משנה את הטקסט והצבעים בהתאם למצב הנבחר.
-     */
-    private void updateThemeButtonLook(JButton btn, boolean isDark) {
-        if (isDark) {
-            // עיצוב עבור מצב כהה (Dark Mode) 🌙
-            btn.setText("Dark Mode 🌙");
-            btn.setBackground(new Color(60, 60, 80)); // כחול כהה
-            btn.setForeground(new Color(220, 220, 255)); // טקסט בהיר
-            btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(100, 100, 150), 1),
-                BorderFactory.createEmptyBorder(5, 15, 5, 15)
-            ));
-        } else {
-            // עיצוב עבור מצב בהיר (Light Mode) ☀️
-            btn.setText("Light Mode ☀️");
-            btn.setBackground(new Color(255, 250, 240)); // לבן שמנת
-            btn.setForeground(new Color(220, 110, 160));   // כתום/זהב
-            btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(240, 180, 210), 1),
-                BorderFactory.createEmptyBorder(5, 15, 5, 15)
-            ));
+
+    // ==========================
+    //  Help Dialog (inner class)
+    // ==========================
+    // ==========================
+    //  Help Dialog (inner class)
+    // ==========================
+    private class HelpDialog extends JDialog {
+
+        HelpDialog() {
+            super(SwingUtilities.getWindowAncestor(SettingsPanel.this),
+                    "How to Play – Minesweeper", ModalityType.APPLICATION_MODAL);
+
+            setSize(650, 650);
+            setLocationRelativeTo(SettingsPanel.this);
+
+            JPanel panel = new JPanel(new BorderLayout());
+            panel.setBackground(new Color(30, 30, 30));
+            panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+            // כותרת למעלה
+            JLabel title = new JLabel("▦  How to Play", SwingConstants.CENTER);
+            title.setFont(new Font("Segoe UI Emoji", Font.BOLD, 28));
+            title.setForeground(Color.WHITE);
+            panel.add(title, BorderLayout.NORTH);
+
+            // טקסט גלילה – עם צבעים שונים לאייקונים
+            JTextPane text = new JTextPane();
+            text.setEditable(false);
+            text.setOpaque(false);
+            text.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
+            text.setForeground(Color.WHITE);
+
+            // בניית התוכן בעזרת סטיילים
+            appendSection(
+                    text,
+                    "🎯", new Color(255, 215, 0),           // זהב
+                    " Objective:\n",
+                    "Work together to reveal all safe tiles while avoiding mines.\n" +
+                    "Use questions and surprises wisely to maximize your final score.\n\n"
+            );
+
+            appendSection(
+                    text,
+                    "🌀", new Color(120, 200, 255),         // טורקיז/כחול
+                    " Turn System:\n",
+                    "- Players take turns one after another.\n" +
+                    "- A turn is finished only after the player completes everything\n" +
+                    "  related to a Question or a Surprise (answer + result animation).\n\n"
+            );
+
+            appendSection(
+                    text,
+                    "🧩", new Color(255, 170, 255),         // ורוד-סגול
+                    " Tile Types:\n",
+                    "• Empty tile – reveals an empty area with no mines around it.\n" +
+                    "• Number tile – shows how many mines are touching this tile.\n" +
+                    "• Mine 💣 – reduces your shared lives when revealed.\n" +
+                    "• Question tile ❓ – opens a quiz question. Correct answers award\n" +
+                    "  points (and sometimes bonuses), wrong answers may have a cost.\n" +
+                    "• Surprise tile 🎁 – triggers a random effect such as bonus score,\n" +
+                    "  extra lives or other special events defined for the level.\n\n"
+            );
+
+            appendSection(
+                    text,
+                    "❤️", new Color(255, 100, 140),         // אדום-ורוד
+                    " Shared Lives:\n",
+                    "The team has a shared pool of lives (hearts). Revealing a mine\n" +
+                    "usually removes one heart. When you run out of hearts, the game ends.\n\n"
+            );
+
+            appendSection(
+                    text,
+                    "⭐", new Color(255, 230, 120),         // צהוב-בהיר
+                    " Scoring:\n",
+                    "Revealing safe tiles carefully and answering questions correctly\n" +
+                    "increases your score. Some surprises can grant extra bonuses.\n\n"
+            );
+
+            appendSection(
+                    text,
+                    "🏆", new Color(255, 215, 0),           // זהב
+                    " Victory:\n",
+                    "You win when all required mines are correctly identified and the\n" +
+                    "team still has at least one heart left, or when you meet the\n" +
+                    "special win conditions defined for the chosen difficulty.\n\n" +
+                    "Tip: Communicate with your teammate, plan your moves, and think\n" +
+                    "about the numbers around you before clicking!\n"
+            );
+
+            JScrollPane scroll = new JScrollPane(text);
+            scroll.setOpaque(false);
+            scroll.getViewport().setOpaque(false);
+            scroll.setBorder(null);
+            panel.add(scroll, BorderLayout.CENTER);
+
+            JButton closeBtn = new JButton("Close ✖");
+            closeBtn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
+            closeBtn.setBackground(new Color(180, 60, 60));
+            closeBtn.setForeground(Color.WHITE);
+            closeBtn.setFocusPainted(false);
+            closeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            closeBtn.addActionListener(e -> dispose());
+
+            JPanel bottom = new JPanel();
+            bottom.setOpaque(false);
+            bottom.add(closeBtn);
+            panel.add(bottom, BorderLayout.SOUTH);
+
+            setContentPane(panel);
         }
+
+        /**
+         * מוסיף מקטע (אייקון צבעוני + כותרת + טקסט) ל-JTextPane.
+         */
+        private void appendSection(JTextPane pane,
+                String icon,
+                Color iconColor,
+                String title,
+                String body) {
+
+StyledDocument doc = pane.getStyledDocument();
+
+try {
+// סגנון לאייקון
+Style iconStyle = pane.addStyle("icon", null);
+StyleConstants.setForeground(iconStyle, iconColor);
+StyleConstants.setBold(iconStyle, true);
+StyleConstants.setFontSize(iconStyle, 20);
+
+// סגנון לכותרת
+Style titleStyle = pane.addStyle("title", null);
+StyleConstants.setForeground(titleStyle, Color.WHITE);
+StyleConstants.setBold(titleStyle, true);
+StyleConstants.setFontSize(titleStyle, 16);
+
+// סגנון לטקסט הרגיל
+Style bodyStyle = pane.addStyle("body", null);
+StyleConstants.setForeground(bodyStyle, Color.WHITE);
+StyleConstants.setFontSize(bodyStyle, 14);
+
+// הכנסת הטקסט למסמך
+doc.insertString(doc.getLength(), icon + " ", iconStyle);
+doc.insertString(doc.getLength(), title + "\n", titleStyle);
+doc.insertString(doc.getLength(), body + "\n\n", bodyStyle);
+
+} catch (BadLocationException ex) {
+ex.printStackTrace();
+}
+}
+
     }
+
+
+    
+
 }

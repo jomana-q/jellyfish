@@ -5,8 +5,7 @@ import model.*;
 import model.ThemeManager;
 
 import javax.swing.*;
-import javax.swing.border.Border;
-
+import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -859,24 +858,15 @@ public class MinesweeperGUI extends JPanel {
 		}
 	}
 
-	public void showQuestionResultOverlay(OverlayType type,
-			String title,
-			String subtitle,
-			int seconds) {
+        return root;
+    }
 
-		overlayUsingQuestionTheme = true;
-		OverlayCardPanel.setTheme(OVERLAY_BLUE_BG, OVERLAY_BLUE_BORDER);
+    private JPanel buildPlayersRow() {
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
 
-		int s = 140;
-		if (overlayEmoji != null) {
-			if (type == OverlayType.GOOD) {
-				overlayEmoji.setIcon(scaledIcon(ICON_BLUE_GOOD, s, s));
-			} else if (type == OverlayType.BAD) {
-				overlayEmoji.setIcon(scaledIcon(ICON_BLUE_BAD, s, s));
-			} else {
-				overlayEmoji.setIcon(null);
-			}
-		}
+        playerALabel = createDynamicLabel(player1Name, new Font("Segoe UI", Font.BOLD, 14));
+        playerBLabel = createDynamicLabel(player2Name, new Font("Segoe UI", Font.BOLD, 14));
 
 		showResultOverlay(type, title, subtitle, seconds);
 	}
@@ -903,137 +893,138 @@ public class MinesweeperGUI extends JPanel {
 		showResultOverlayWithIcon(sadIcon, title, subtitle, 2);
 	}
 
-	public void playGiftRevealAndShowOverlay(boolean isFirstBoard, int r, int c,
-			OverlayType type,
-			String title, String subtitle,
-			int overlaySeconds) {
+        ImageIcon closed = scaledIcon(ICON_GIFT_CLOSED, cellSize, cellSize);
+        ImageIcon open   = scaledIcon(ICON_GIFT_OPEN,   cellSize, cellSize);
 
-		if (buttons1 == null || buttons2 == null) return;
-		CellButton[][] grid = isFirstBoard ? buttons1 : buttons2;
+        btn.setText("");
+        btn.setIcon(null);
+        btn.setScaledIcon(closed);
 
-		if (r < 0 || c < 0 || r >= grid.length || c >= grid[0].length) return;
+        Timer t1 = new Timer(350, e1 -> {
 
-		CellButton btn = grid[r][c];
-		if (btn == null) return;
+            btn.setText("");
+            btn.setIcon(null);
+            btn.setScaledIcon(open);
 
-		// אם אין אייקונים - פשוט מציג Overlay בלי אנימציה
-		if (ICON_GIFT_CLOSED == null || ICON_GIFT_OPEN == null) {
-			showResultOverlay(type, title, subtitle, overlaySeconds);
-			return;
-		}
+            Timer t2 = new Timer(450, e2 -> {
 
-		setAllBoardsEnabled(false);
+                refreshView();
+                updateTurnHighlight();
 
-		//  קובעים גודל אחיד לפי גודל הכפתור
-		int cellSize = Math.min(btn.getWidth(), btn.getHeight());
-		if (cellSize <= 0) cellSize = 48;   // fallback אם עוד לא חושב layout
-		cellSize = Math.max(22, cellSize - 8);
+                showResultOverlay(type, title, subtitle, overlaySeconds);
 
-		ImageIcon closed = scaledIcon(ICON_GIFT_CLOSED, cellSize, cellSize);
-		ImageIcon open   = scaledIcon(ICON_GIFT_OPEN,   cellSize, cellSize);
+                ((Timer) e2.getSource()).stop();
+            });
 
-		// מצב 1: מתנה סגורה
-		btn.setText("");
-		btn.setIcon(null);
-		btn.setScaledIcon(closed);
+            t2.setRepeats(false);
+            t2.start();
 
-		Timer t1 = new Timer(350, e1 -> {
+            ((Timer) e1.getSource()).stop();
+        });
 
-			// מצב 2: מתנה פתוחה
-			btn.setText("");
-			btn.setIcon(null);
-			btn.setScaledIcon(open);
+        t1.setRepeats(false);
+        t1.start();
+    }
 
-			Timer t2 = new Timer(450, e2 -> {
+    public void playGiftCenterAndShowOverlay(OverlayType type,
+            String title, String subtitle,
+            int overlaySeconds,
+            Runnable onDone) {
 
-				// מצב 3: החזרת מצב UI לפי המודל + הצגת Overlay
-				refreshView();
-				updateTurnHighlight();
+// 🔁 מקרה נפילה – אין משאבים, אין גיפט במרכז
+if (overlayRoot == null || cardsHolder == null ||
+giftOverlay == null || giftLabel == null ||
+ICON_GIFT_CLOSED == null || ICON_GIFT_OPEN == null) {
 
-				showResultOverlay(type, title, subtitle, overlaySeconds);
+// מציגים את האוברליי בלי טיימר פנימי
+showResultOverlay(type, title, subtitle, 0);
 
-				((Timer) e2.getSource()).stop();
-			});
+if (onDone != null && overlaySeconds > 0) {
+Timer t = new Timer(overlaySeconds * 1000, e -> {
+hideOverlayNow();   // סוגר את האוברליי
+onDone.run();       // endTurn → קו זהב לשחקן הבא
+((Timer) e.getSource()).stop();
+});
+t.setRepeats(false);
+t.start();
+} else if (onDone != null) {
+onDone.run();
+}
+return;
+}
 
-			t2.setRepeats(false);
-			t2.start();
+// נועל לוחות בזמן האנימציה
+setAllBoardsEnabled(false);
 
-			((Timer) e1.getSource()).stop();
-		});
+cardsHolder.setVisible(false);
+overlayRoot.setVisible(true);
 
-		t1.setRepeats(false);
-		t1.start();
-	}
+int size = computeCenterGiftSize();
+ImageIcon closed = scaledIcon(ICON_GIFT_CLOSED, size, size);
+ImageIcon open   = scaledIcon(ICON_GIFT_OPEN,   size, size);
+
+giftLabel.setHorizontalAlignment(SwingConstants.CENTER);
+giftLabel.setVerticalAlignment(SwingConstants.CENTER);
+
+giftLabel.setIcon(closed);
+giftOverlay.setVisible(true);
+
+overlayRoot.revalidate();
+overlayRoot.repaint();
+
+// שלב 1 – תיבת מתנה סגורה → פתוחה
+Timer t1 = new Timer(350, e1 -> {
+giftLabel.setIcon(open);
+overlayRoot.repaint();
+
+// שלב 2 – אחרי שהגיפט פתוח רגע, עוברים לאוברליי תוצאה
+Timer t2 = new Timer(650, e2 -> {
+
+giftOverlay.setVisible(false);
+cardsHolder.setVisible(true);
+
+// ⚠️ שימי לב: כאן אנחנו מציגים את האוברליי בלי טיימר פנימי
+// (seconds = 0) כדי לשלוט בעצמנו מתי הוא נסגר.
+showResultOverlay(type, title, subtitle, 0);
+
+overlayRoot.revalidate();
+overlayRoot.repaint();
+
+// ⏲️ עכשיו טיימר חיצוני לסגירת האוברליי + מעבר תור
+if (onDone != null && overlaySeconds > 0) {
+Timer t3 = new Timer(overlaySeconds * 1000, e3 -> {
+hideOverlayNow();   // סוגר את האוברליי
+onDone.run();       // endTurn → updateTurnHighlight → קו זהב
+((Timer) e3.getSource()).stop();
+});
+t3.setRepeats(false);
+t3.start();
+} else if (onDone != null) {
+onDone.run();
+}
+
+((Timer) e2.getSource()).stop();
+});
+
+t2.setRepeats(false);
+t2.start();
+
+((Timer) e1.getSource()).stop();
+});
+
+t1.setRepeats(false);
+t1.start();
+}
 
 
-	public void playGiftCenterAndShowOverlay(OverlayType type,
-			String title, String subtitle,
-			int overlaySeconds,
-			Runnable onDone) {
+    public void playGiftCenterAndShowOverlay(OverlayType type,
+                                             String title, String subtitle,
+                                             int overlaySeconds) {
+        playGiftCenterAndShowOverlay(type, title, subtitle, overlaySeconds, null);
+    }
 
-		if (overlayRoot == null || cardsHolder == null ||
-				giftOverlay == null || giftLabel == null ||
-				ICON_GIFT_CLOSED == null || ICON_GIFT_OPEN == null) {
 
-			showResultOverlay(type, title, subtitle, overlaySeconds);
-			if (onDone != null) SwingUtilities.invokeLater(onDone);
-			return;
-		}
-
-		setAllBoardsEnabled(false);
-
-		//  מסתירים את ההודעה/הכרטיס בזמן האנימציה
-		cardsHolder.setVisible(false);
-
-		//  מציגים רק רקע כהה + מתנה
-		overlayRoot.setVisible(true);
-
-		//  אותו גודל לשני האייקונים
-		int size = computeCenterGiftSize();
-		ImageIcon closed = scaledIcon(ICON_GIFT_CLOSED, size, size);
-		ImageIcon open   = scaledIcon(ICON_GIFT_OPEN,   size, size);
-
-		giftLabel.setHorizontalAlignment(SwingConstants.CENTER);
-		giftLabel.setVerticalAlignment(SwingConstants.CENTER);
-
-		giftLabel.setIcon(closed);
-		giftOverlay.setVisible(true);
-
-		overlayRoot.revalidate();
-		overlayRoot.repaint();
-
-		Timer t1 = new Timer(350, e1 -> {
-			giftLabel.setIcon(open);
-			overlayRoot.repaint();
-
-			Timer t2 = new Timer(650, e2 -> {
-
-				// מסתירים מתנה
-				giftOverlay.setVisible(false);
-
-				// עכשיו מציגים הודעה
-				cardsHolder.setVisible(true);
-				showResultOverlay(type, title, subtitle, overlaySeconds);
-
-				// מחזירים UI
-				refreshView();
-				updateTurnHighlight();
-
-				if (onDone != null) SwingUtilities.invokeLater(onDone);
-
-				((Timer) e2.getSource()).stop();
-			});
-
-			t2.setRepeats(false);
-			t2.start();
-
-			((Timer) e1.getSource()).stop();
-		});
-
-		t1.setRepeats(false);
-		t1.start();
-	}
-
+    // ========== refresh boards ==========
 
 	// Overload without callback 
 	public void playGiftCenterAndShowOverlay(OverlayType type,
@@ -1052,23 +1043,930 @@ public class MinesweeperGUI extends JPanel {
 	    return count;
 	}
 
-	public void refreshView() {
-		boolean p1Turn = (controller == null) || controller.isPlayer1Turn();
 
-		ThemeManager tm = ThemeManager.getInstance();
-		Color board1Color = tm.getBoardAColor();
-		Color board2Color = tm.getBoardBColor();
+    public void refreshView() {
+        boolean p1Turn = (controller == null) || controller.isPlayer1Turn();
 
-		updateBoardView(board1, buttons1, board1Color, p1Turn);
-		updateBoardView(board2, buttons2, board2Color, !p1Turn);
+        ThemeManager tm = ThemeManager.getInstance();
+        Color board1Color = tm.getBoardAColor();
+        Color board2Color = tm.getBoardBColor();
 
-		String current = p1Turn ? player1Name : player2Name;
-		turnLabel.setText("Turn: " + current);
+        updateBoardView(board1, buttons1, board1Color, p1Turn);
+        updateBoardView(board2, buttons2, board2Color, !p1Turn);
 
-		livesHeartsPanel.setLives(session.getLives());
-		livesHeartsPanel.repaint();
+        String current = p1Turn ? player1Name : player2Name;
+        turnLabel.setText("Turn: " + current);
 
-		scoreChip.setText("Score: " + session.getScore());
+        livesHeartsPanel.setLives(session.getLives());
+        livesHeartsPanel.repaint();
+
+        scoreChip.setText("Score: " + session.getScore());
+
+        updateTimeLabel();
+        updateTurnIndicatorUI();
+    }
+
+    private void updateTurnIndicatorUI() {
+        boolean p1Turn = (controller == null) || controller.isPlayer1Turn();
+        p1Indicator.setActive(p1Turn);
+        p2Indicator.setActive(!p1Turn);
+    }
+
+    private void updateBoardView(Board board, CellButton[][] buttons, Color playerColor, boolean active) {
+        if (buttons == null) return;
+
+        int rows = board.getRows();
+        int cols = board.getCols();
+
+        ThemeManager tm = ThemeManager.getInstance();
+        Color baseColor = active ? playerColor : darker(playerColor, 0.6);
+
+        Color glass = tm.isDarkMode()
+                ? new Color(255, 255, 255, 45)
+                : new Color(255, 255, 255, 35);
+
+        Color mineGlass = tm.isDarkMode()
+                ? new Color(255, 120, 120, 85)
+                : new Color(255, 140, 140, 70);
+
+        Color questionGlass = tm.isDarkMode()
+                ? new Color(140, 190, 255, 90)
+                : new Color(160, 205, 255, 75);
+
+        Color surpriseGlass = tm.isDarkMode()
+                ? new Color(255, 170, 210, 90)
+                : new Color(255, 185, 220, 75);
+
+        Color usedGlass = tm.isDarkMode()
+                ? new Color(255, 255, 255, 30)
+                : new Color(255, 255, 255, 25);
+
+        Color textOnGlass = tm.getTextColor();
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+
+                Cell cell = board.getCell(r, c);
+                CellButton btn = buttons[r][c];
+
+                if (!cell.isRevealed()) {
+                    btn.setFill(baseColor);
+                    btn.setTextColor(Color.WHITE);
+
+                    if (cell.isFlagged()) {
+                        btn.setScaledIcon(ICON_FLAG);
+                    } else {
+                        btn.setIcon(null);
+                        btn.setText("");
+                    }
+                    continue;
+                }
+
+                switch (cell.getType()) {
+
+                    case MINE -> {
+                        btn.setIcon(null);
+                        btn.setText("");
+                        btn.setFill(mineGlass);
+                        btn.setScaledIcon(ICON_MINE);
+                        btn.setTextColor(Color.WHITE);
+                    }
+
+                    case NUMBER -> {
+                        btn.setIcon(null);
+                        btn.setText(String.valueOf(cell.getAdjacentMines()));
+                        btn.setFill(glass);
+                        btn.setTextColor(textOnGlass);
+                        btn.setFont(new Font("Segoe UI", Font.BOLD, btn.getFont().getSize()));
+                    }
+
+                    case EMPTY -> {
+                        btn.setIcon(null);
+                        btn.setText("");
+                        btn.setFill(glass);
+                        btn.setTextColor(textOnGlass);
+                    }
+
+                    case QUESTION -> {
+                        if (cell.isPowerUsed()) {
+                            btn.setIcon(null);
+                            btn.setText("USED");
+                            btn.setFill(usedGlass);
+                            btn.setTextColor(textOnGlass);
+                            btn.setFont(new Font("Segoe UI", Font.BOLD, Math.max(12, btn.getFont().getSize() - 6)));
+                        } else {
+                            btn.setIcon(null);
+                            btn.setText("");
+                            btn.setFill(questionGlass);
+                            btn.setScaledIcon(ICON_QUESTION);
+                            btn.setTextColor(Color.WHITE);
+                        }
+                    }
+
+                    case SURPRISE -> {
+                        if (cell.isPowerUsed()) {
+                            btn.setIcon(null);
+                            btn.setText("USED");
+                            btn.setFill(usedGlass);
+                            btn.setTextColor(textOnGlass);
+                            btn.setFont(new Font("Segoe UI", Font.BOLD, Math.max(12, btn.getFont().getSize() - 6)));
+                        } else {
+                            btn.setIcon(null);
+                            btn.setText("");
+                            btn.setFill(surpriseGlass);
+                            btn.setScaledIcon(ICON_SURPRISE);
+                            btn.setTextColor(Color.WHITE);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private Color darker(Color c, double factor) {
+        return new Color(
+                (int) (c.getRed() * factor),
+                (int) (c.getGreen() * factor),
+                (int) (c.getBlue() * factor)
+        );
+    }
+
+    // ⭐ כאן הקסם של המסגרת הזהובה
+    public void updateTurnHighlight() {
+        boolean p1Active = (controller == null) || controller.isPlayer1Turn();
+        boolean paused   = controller != null && controller.isPaused();
+
+        if (paused) {
+            setAllBoardsEnabled(false);
+        } else {
+            setBoardEnabled(buttons1, p1Active);
+            setBoardEnabled(buttons2, !p1Active);
+        }
+        updateTurnIndicatorUI();
+
+        // ⭐ טריגר לאנימציית פתיחת-תור (חד-פעמית)
+        if (boardPanel1 != null) boardPanel1.setActive(p1Active);
+        if (boardPanel2 != null) boardPanel2.setActive(!p1Active);
+    }
+
+
+    // ========== Game Over ==========
+
+    public void showGameOver(boolean success) {
+        if (uiClockTimer != null && uiClockTimer.isRunning()) uiClockTimer.stop();
+
+        int livesBefore = session.getLives();
+        int minesRevealed = countRevealedMines(board1) + countRevealedMines(board2);
+        int durationSeconds = (controller == null) ? 0 : (int) (controller.getElapsedActiveMillis() / 1000);
+
+        session.convertRemainingLivesToScoreAtEnd();
+
+        board1.revealAllCells();
+        board2.revealAllCells();
+        refreshView();
+        setAllBoardsEnabled(false);
+
+        String resultLabel = success ? "VICTORY" : "GAME OVER";
+        String resultSub   = success ? "All mines revealed!" : "Out of shared lives!";
+        String difficultyText = session.getDifficulty().name();
+
+        GameHistory history = new GameHistory();
+        history.addEntry(
+                player1Name + " & " + player2Name,
+                session.getScore(),
+                difficultyText,
+                success ? "All mines revealed" : "Out of lives",
+                durationSeconds
+        );
+
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        GameOverDialog dialog = new GameOverDialog(
+                owner,
+                success,
+                resultLabel,
+                resultSub,
+                player1Name + " & " + player2Name,
+                session.getScore(),
+                livesBefore,
+                minesRevealed,
+                difficultyText,
+                durationSeconds,
+                () -> parent.startGame(player1Name, player2Name, session.getDifficulty()),
+                parent::showMainMenu
+        );
+        dialog.setVisible(true);
+    }
+
+    private int countRevealedMines(Board board) {
+        int count = 0;
+        for (int r = 0; r < board.getRows(); r++) {
+            for (int c = 0; c < board.getCols(); c++) {
+                Cell cell = board.getCell(r, c);
+                if (cell.getType() == CellType.MINE && cell.isRevealed()) count++;
+            }
+        }
+        return count;
+    }
+
+    // ========== helpers / inner components ==========
+
+    private enum OverlayStyle {
+        POSITIVE(new Color(90, 200, 120)),
+        NEGATIVE(new Color(235, 90, 90)),
+        INFO(new Color(120, 170, 240));
+
+        final Color accent;
+        OverlayStyle(Color accent) { this.accent = accent; }
+
+        static OverlayStyle fromTitle(String title) {
+            String t = (title == null) ? "" : title.toUpperCase();
+            if (t.contains("GOOD") || t.contains("CORRECT") || t.contains("SUCCESS")) return POSITIVE;
+            if (t.contains("BAD") || t.contains("WRONG") || t.contains("NOT") || t.contains("NO ")) return NEGATIVE;
+            return INFO;
+        }
+    }
+
+    private static class OverlayCardPanel extends JPanel {
+
+        private static Color THEME_BG     = new Color(255, 220, 240, 245);
+        private static Color THEME_BORDER = new Color(150, 70, 170, 180);
+        private static Color THEME_LINE   = new Color(160, 60, 190, 180);
+
+        static void setTheme(Color bg, Color border) {
+            if (bg != null) THEME_BG = bg;
+            if (border != null) {
+                THEME_BORDER = border;
+                THEME_LINE = new Color(border.getRed(), border.getGreen(), border.getBlue(), 160);
+            }
+        }
+
+        OverlayCardPanel() { setOpaque(false); }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+            int arc = 12;
+
+            g2.setColor(new Color(0, 0, 0, 70));
+            g2.fillRoundRect(10, 12, w - 16, h - 16, arc, arc);
+
+            g2.setColor(THEME_BG);
+            g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
+
+            g2.setColor(THEME_BORDER);
+            g2.setStroke(new BasicStroke(3f));
+            g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
+
+            g2.setColor(THEME_LINE);
+            g2.setStroke(new BasicStroke(6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.drawLine(24, h - 20, w - 24, h - 20);
+
+            g2.dispose();
+        }
+    }
+
+    private static class OverlayIcon extends JComponent {
+        private OverlayStyle style = OverlayStyle.INFO;
+
+        void setStyle(OverlayStyle style) {
+            this.style = (style == null) ? OverlayStyle.INFO : style;
+            repaint();
+        }
+        OverlayStyle getStyle() { return style; }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+
+            g2.setColor(new Color(255, 255, 255, 20));
+            g2.fillOval(2, 2, w - 4, h - 4);
+
+            g2.setColor(new Color(style.accent.getRed(), style.accent.getGreen(), style.accent.getBlue(), 230));
+            g2.setStroke(new BasicStroke(5f));
+            g2.drawOval(4, 4, w - 8, h - 8);
+
+            g2.setColor(Color.WHITE);
+            g2.setStroke(new BasicStroke(7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+            int cx = w / 2;
+            int cy = h / 2;
+
+            if (style == OverlayStyle.POSITIVE) {
+                g2.drawLine(cx - 14, cy + 2, cx - 4, cy + 12);
+                g2.drawLine(cx - 4, cy + 12, cx + 16, cy - 10);
+            } else if (style == OverlayStyle.NEGATIVE) {
+                g2.drawLine(cx - 14, cy - 14, cx + 14, cy + 14);
+                g2.drawLine(cx + 14, cy - 14, cx - 14, cy + 14);
+            } else {
+                g2.setStroke(new BasicStroke(8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawLine(cx, cy - 10, cx, cy + 12);
+                g2.fillOval(cx - 4, cy - 20, 8, 8);
+            }
+
+            g2.dispose();
+        }
+    }
+
+    private static class CloseIconButton extends JButton {
+        private boolean hover = false;
+        private boolean down  = false;
+
+        CloseIconButton() {
+            setPreferredSize(new Dimension(36, 36));
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            setOpaque(false);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+                @Override public void mouseExited(MouseEvent e)  { hover = false; down = false; repaint(); }
+                @Override public void mousePressed(MouseEvent e) { down = true; repaint(); }
+                @Override public void mouseReleased(MouseEvent e){ down = false; repaint(); }
+            });
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+
+            if (hover) {
+                g2.setColor(new Color(255, 255, 255, down ? 70 : 40));
+                g2.fillRoundRect(5, 5, w - 10, h - 10, 10, 10);
+            }
+
+            g2.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.setColor(Color.WHITE);
+
+            int pad = 12;
+            g2.drawLine(pad, pad, w - pad, h - pad);
+            g2.drawLine(w - pad, pad, pad, h - pad);
+
+            g2.dispose();
+        }
+    }
+
+    private static class PauseIconButton extends JButton {
+        private boolean paused = false;
+
+        PauseIconButton() {
+            setPreferredSize(new Dimension(54, 34));
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            setOpaque(false);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
+        }
+
+        void setPaused(boolean paused) {
+            this.paused = paused;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+
+            g2.setColor(new Color(20, 35, 55, 220));
+            g2.fillRoundRect(0, 0, w, h, 12, 12);
+
+            g2.setColor(new Color(255, 255, 255, 120));
+            g2.drawRoundRect(0, 0, w - 1, h - 1, 12, 12);
+
+            int d = Math.min(w, h) - 10;
+            int cx = (w - d) / 2;
+            int cy = (h - d) / 2;
+
+            g2.setColor(new Color(220, 40, 40));
+            g2.fillOval(cx, cy, d, d);
+
+            g2.setColor(new Color(255, 255, 255, 200));
+            g2.setStroke(new BasicStroke(2f));
+            g2.drawOval(cx, cy, d, d);
+
+            g2.setColor(Color.BLACK);
+            int innerX = cx + d / 3;
+            int innerY = cy + d / 4;
+            int barW = d / 8;
+            int barH = d / 2;
+
+            if (!paused) {
+                g2.fillRoundRect(innerX, innerY, barW, barH, 3, 3);
+                g2.fillRoundRect(innerX + barW * 2, innerY, barW, barH, 3, 3);
+            } else {
+                Polygon tri = new Polygon();
+                tri.addPoint(innerX, innerY);
+                tri.addPoint(innerX, innerY + barH);
+                tri.addPoint(innerX + barW * 3, innerY + barH / 2);
+                g2.fillPolygon(tri);
+            }
+
+            g2.dispose();
+        }
+    }
+
+    private static class PauseMenuPanel extends JPanel {
+        PauseMenuPanel(Runnable onResume, Runnable onRestart, Runnable onMenu) {
+            setOpaque(false);
+            setLayout(new GridBagLayout());
+
+            boolean isDark = ThemeManager.getInstance().isDarkMode();
+
+            Color boxBg = isDark ? new Color(15, 30, 50, 245) : new Color(255, 255, 255, 235);
+            Color accentColor = isDark ? new Color(100, 200, 255) : new Color(40, 100, 180);
+            Color borderColor = isDark ? new Color(255, 255, 255, 50) : new Color(0, 0, 0, 30);
+
+            JPanel box = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setColor(boxBg);
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+                    g2.setColor(borderColor);
+                    g2.setStroke(new BasicStroke(2f));
+                    g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 30, 30);
+                    g2.dispose();
+                }
+            };
+
+            int boxWidth = 360;
+            int boxHeight = 170;
+            int resumeBtnW = 300;
+            int resumeBtnH = 40;
+            int midBtnW = 150;
+            int midBtnH = 34;
+            int emojiFontSize = 18;
+
+            box.setPreferredSize(new Dimension(boxWidth, boxHeight));
+            box.setOpaque(false);
+            box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
+            box.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+            JLabel paused = new JLabel("PAUSED ⏸️", SwingConstants.CENTER);
+            paused.setAlignmentX(Component.CENTER_ALIGNMENT);
+            paused.setFont(new Font("Segoe UI Emoji", Font.BOLD, emojiFontSize + 4));
+            paused.setForeground(accentColor);
+            paused.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+
+            JPanel row = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+            row.setOpaque(false);
+
+            JButton restart = createCompactBtn("Restart 🔄", isDark, emojiFontSize - 4, midBtnW, midBtnH);
+            JButton menu = createCompactBtn("Menu 🏠", isDark, emojiFontSize - 4, midBtnW, midBtnH);
+
+            restart.addActionListener(e -> onRestart.run());
+            menu.addActionListener(e -> onMenu.run());
+
+            row.add(restart);
+            row.add(menu);
+
+            JButton resume = new JButton("RESUME ▶️");
+            resume.setAlignmentX(Component.CENTER_ALIGNMENT);
+            resume.setFont(new Font("Segoe UI Emoji", Font.BOLD, 20));
+            resume.setForeground(Color.WHITE);
+            resume.setBackground(new Color(40, 160, 80));
+            resume.setFocusPainted(false);
+            resume.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            resume.setMaximumSize(new Dimension(resumeBtnW, resumeBtnH));
+            resume.addActionListener(e -> onResume.run());
+
+            box.add(paused);
+            box.add(Box.createVerticalStrut(5));
+            box.add(row);
+            box.add(Box.createVerticalStrut(8));
+            box.add(resume);
+
+            add(box);
+        }
+
+        private JButton createCompactBtn(String text, boolean isDark, int fontSize, int w, int h) {
+            JButton b = new JButton(text);
+            b.setFont(new Font("Segoe UI Emoji", Font.BOLD, fontSize));
+            b.setForeground(isDark ? Color.WHITE : Color.BLACK);
+            b.setContentAreaFilled(false);
+            b.setFocusPainted(false);
+            b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            b.setPreferredSize(new Dimension(w, h));
+            b.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(isDark ? new Color(255,255,255,60) : new Color(0,0,0,40), 1, true),
+                    BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            ));
+            return b;
+        }
+    }
+
+    private static class LivesHeartsPanel extends JComponent {
+        private int lives = MAX_LIVES_DISPLAY;
+        private final int maxLives;
+
+        LivesHeartsPanel(int maxLives) {
+            this.maxLives = maxLives;
+            setPreferredSize(new Dimension(560, 38));
+            setOpaque(false);
+        }
+
+        void setLives(int lives) {
+            this.lives = Math.max(0, Math.min(maxLives, lives));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            g2.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            g2.setColor(ThemeManager.getInstance().getTextColor());
+
+            String label = "Shared Lives: " + lives + " / " + maxLives;
+            FontMetrics fm = g2.getFontMetrics();
+            int x = 0;
+            int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
+            g2.drawString(label, x, y);
+
+            int startX = fm.stringWidth(label) + 16;
+            int centerY = getHeight() / 2;
+
+            int heartW = 18;
+            int heartH = 16;
+            int gap = 7;
+
+            for (int i = 0; i < maxLives; i++) {
+                int hx = startX + i * (heartW + gap);
+                boolean filled = i < lives;
+
+                if (filled) {
+                    g2.setColor(ThemeManager.getInstance().getTextColor());
+                    drawHeart(g2, hx, centerY - heartH / 2, heartW, heartH, true);
+                } else {
+                    Color emptyColor = ThemeManager.getInstance().isDarkMode()
+                            ? new Color(200, 200, 200, 160)
+                            : new Color(0, 0, 0, 100);
+                    g2.setColor(emptyColor);
+                    drawHeart(g2, hx, centerY - heartH / 2, heartW, heartH, false);
+                }
+            }
+
+            g2.dispose();
+        }
+
+        private void drawHeart(Graphics2D g2, int x, int y, int w, int h, boolean fill) {
+            int cx1 = x + w / 4;
+            int cx2 = x + (3 * w) / 4;
+
+            Polygon bottom = new Polygon();
+            bottom.addPoint(x, y + h / 3);
+            bottom.addPoint(x + w, y + h / 3);
+            bottom.addPoint(x + w / 2, y + h);
+
+            Shape leftCircle = new java.awt.geom.Ellipse2D.Double(cx1 - w / 4.0, y, w / 2.0, h / 1.6);
+            Shape rightCircle = new java.awt.geom.Ellipse2D.Double(cx2 - w / 4.0, y, w / 2.0, h / 1.6);
+
+            java.awt.geom.Area heart = new java.awt.geom.Area(leftCircle);
+            heart.add(new java.awt.geom.Area(rightCircle));
+            heart.add(new java.awt.geom.Area(bottom));
+
+            if (fill) g2.fill(heart);
+            else {
+                g2.setStroke(new BasicStroke(2f));
+                g2.draw(heart);
+            }
+        }
+    }
+
+    private JLabel createDynamicLabel(String text, Font font) {
+        JLabel lbl = new JLabel(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Color themeColor = ThemeManager.getInstance().getTextColor();
+                if (!getForeground().equals(themeColor)) {
+                    setForeground(themeColor);
+                }
+                super.paintComponent(g);
+            }
+        };
+        lbl.setFont(font);
+        return lbl;
+    }
+
+    // ⭐ מסגרת זהב מבריקה + אנימציית wavy
+    // ⭐ מסגרת זהב מבריקה + גל וכוכביות
+    // ⭐ פאנל לוח עם אנימציית "פתיחת תור":
+    //    – קו זהב מבריק
+    //    – כוכביות שיוצאות מהקו
+    //    – גל אור שעובר על המשבצות
+    // האנימציה רצה רק לכמה שניות בכל מעבר תור, ואז נעלמת.
+    // ⭐ מסגרת זהב מבריקה + גל וכוכביות
+    // פאנל הלוח עושה:
+    // 1. קו זהב שמתחיל מהפינה ורץ סביב כל המסגרת.
+    // 2. כוכבים קטנים על הקטע שכבר נפתח.
+    // 3. גל אור חזק שעובר מעל המשבצות.
+    // האנימציה רצה רק כשיש מעבר תור, ואז נעלמת.
+    // ⭐ מסגרת זהב מבריקה – שני קווים שיוצאים מהפינה
+    //    ועוד גל אור על המשבצות.
+    private static class AnimatedBoardPanel extends JPanel {
+
+        private boolean introPlaying = false;
+        private long introStartMs = 0L;
+
+        // משך האנימציה (קצר יותר)
+        private static final long INTRO_DURATION_MS = 1200L;
+
+        private float phase = 0f;
+        private  Timer animTimer;
+
+        AnimatedBoardPanel(JComponent content) {
+            setLayout(new BorderLayout());
+            setOpaque(false);
+            add(content, BorderLayout.CENTER);
+
+            animTimer = new Timer(40, e -> {
+                if (!introPlaying) {
+                    animTimer.stop();
+                    return;
+                }
+                phase += 0.18f;
+                if (phase > Math.PI * 2) {
+                    phase -= (float) (Math.PI * 2);
+                }
+
+                long now = System.currentTimeMillis();
+                if (now - introStartMs >= INTRO_DURATION_MS) {
+                    stopIntro();
+                }
+                repaint();
+            });
+        }
+
+        // נקרא מ-updateTurnHighlight
+        void setActive(boolean isCurrent) {
+            if (isCurrent) {
+                startIntro();
+            } else {
+                stopIntro();
+            }
+        }
+
+        private void startIntro() {
+            introStartMs = System.currentTimeMillis();
+            introPlaying = true;
+            if (!animTimer.isRunning()) {
+                animTimer.start();
+            }
+            repaint();
+        }
+
+        private void stopIntro() {
+            introPlaying = false;
+            if (animTimer.isRunning()) {
+                animTimer.stop();
+            }
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (!introPlaying) return;
+
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int inset = 6;
+            int x = inset;
+            int y = inset;
+            int w = getWidth() - 2 * inset - 1;
+            int h = getHeight() - 2 * inset - 1;
+            int arc = 22;
+
+            // 0..1 – כמה רחוק האנימציה
+            long now = System.currentTimeMillis();
+            float progress = (float) (now - introStartMs) / (float) INTRO_DURATION_MS;
+            progress = Math.max(0f, Math.min(1f, progress));
+
+            // גל אור – ברור אבל לא ענק
+            drawWaveBand(g2, x, y, w, h, arc, progress);
+
+            // שני קווים שיוצאים מהפינה ונסגרים בפינה האלכסונית
+            drawTwoWayGoldBorder(g2, x, y, w, h, progress);
+
+            // כוכביות על הקווים
+            drawSparklesOnTwoWays(g2, x, y, w, h, progress);
+
+            g2.dispose();
+        }
+
+        // גל אור גבוה ~1/3 מהלוח
+        private void drawWaveBand(Graphics2D g2,
+                                  int x, int y, int w, int h,
+                                  int arc,
+                                  float progress) {
+
+            int bandHeight = h / 3;
+            int bandY = (int) (y - bandHeight + (h + bandHeight * 2) * progress);
+
+            Shape oldClip = g2.getClip();
+            Shape boardShape = new java.awt.geom.RoundRectangle2D.Float(
+                    x, y, w, h, arc, arc);
+            g2.setClip(boardShape);
+
+            Color waveTop    = new Color(255, 255, 255, 60);
+            Color waveMid    = new Color(255, 255, 210, 210);
+            Color waveBottom = new Color(255, 255, 255, 50);
+
+            GradientPaint gp1 = new GradientPaint(
+                    x, bandY,
+                    waveTop,
+                    x, bandY + bandHeight / 2,
+                    waveMid, true);
+            g2.setPaint(gp1);
+            g2.fillRect(x, bandY, w, bandHeight / 2);
+
+            GradientPaint gp2 = new GradientPaint(
+                    x, bandY + bandHeight / 2,
+                    waveMid,
+                    x, bandY + bandHeight,
+                    waveBottom, true);
+            g2.setPaint(gp2);
+            g2.fillRect(x, bandY + bandHeight / 2, w, bandHeight / 2);
+
+            g2.setClip(oldClip);
+        }
+
+        // שני קווים: אחד עם כיוון השעון, אחד נגד, שניהם יוצאים מהפינה
+        // ונפגשים בפינה האלכסונית.
+        private void drawTwoWayGoldBorder(Graphics2D g2,
+                                          int x, int y, int w, int h,
+                                          float progress) {
+
+            float perimeter = 2f * (w + h);
+            float halfPerimeter = w + h;       // מרחק מפינה לפינה האלכסונית
+
+            float len = halfPerimeter * progress; // אורך כל קו
+
+            g2.setStroke(new BasicStroke(4f,
+                    BasicStroke.CAP_ROUND,
+                    BasicStroke.JOIN_ROUND));
+            g2.setColor(new Color(255, 215, 0, 235));
+
+            // קו ראשון: מתחיל ב־t=0 ומתקדם עם כיוון השעון
+            drawBorderRange(g2, x, y, w, h, 0f, len);
+
+            // קו שני: מתחיל גם מהפינה, אבל נגד כיוון השעון
+            float perimeterStart = perimeter - len;
+            drawBorderRange(g2, x, y, w, h, perimeterStart, perimeter);
+        }
+
+        // מצייר חלק מההיקף בין tStart ל-tEnd (0..perimeter)
+        private void drawBorderRange(Graphics2D g2,
+                                     int x, int y, int w, int h,
+                                     float tStart, float tEnd) {
+
+            float perimeter = 2f * (w + h);
+            tStart = Math.max(0f, Math.min(perimeter, tStart));
+            tEnd   = Math.max(0f, Math.min(perimeter, tEnd));
+            if (tEnd <= tStart) return;
+
+            // קטעים: עליון, ימני, תחתון, שמאלי
+            float[] edgeLen = { w, h, w, h };
+            float[] edgeStart = new float[4];
+            edgeStart[0] = 0;
+            for (int i = 1; i < 4; i++) {
+                edgeStart[i] = edgeStart[i - 1] + edgeLen[i - 1];
+            }
+
+            for (int edge = 0; edge < 4; edge++) {
+                float segStart = edgeStart[edge];
+                float segEnd = segStart + edgeLen[edge];
+
+                float a = Math.max(tStart, segStart);
+                float b = Math.min(tEnd, segEnd);
+                if (b <= a) continue;
+
+                int x1, y1, x2, y2;
+
+                switch (edge) {
+                    case 0 -> { // top: left→right
+                        x1 = x + Math.round(a - segStart);
+                        y1 = y;
+                        x2 = x + Math.round(b - segStart);
+                        y2 = y;
+                    }
+                    case 1 -> { // right: top→bottom
+                        x1 = x + w;
+                        y1 = y + Math.round(a - segStart);
+                        x2 = x + w;
+                        y2 = y + Math.round(b - segStart);
+                    }
+                    case 2 -> { // bottom: right→left
+                        x1 = x + w - Math.round(a - segStart);
+                        y1 = y + h;
+                        x2 = x + w - Math.round(b - segStart);
+                        y2 = y + h;
+                    }
+                    default -> { // left: bottom→top
+                        x1 = x;
+                        y1 = y + h - Math.round(a - segStart);
+                        x2 = x;
+                        y2 = y + h - Math.round(b - segStart);
+                    }
+                }
+                g2.drawLine(x1, y1, x2, y2);
+            }
+        }
+
+        // כוכביות על שני הכיוונים של הקו
+        private void drawSparklesOnTwoWays(Graphics2D g2,
+                                           int x, int y, int w, int h,
+                                           float progress) {
+
+            float perimeter = 2f * (w + h);
+            float halfPerimeter = w + h;
+            float len = halfPerimeter * progress;
+            if (len <= 0f) return;
+
+            int starCount = 16;
+
+            for (int i = 0; i < starCount; i++) {
+                // חצי כוכבים על הקו עם כיוון השעון
+                float t;
+                if (i < starCount / 2) {
+                    float ratio = i / (float) (starCount / 2);
+                    t = len * ratio;
+                } else { // חצי שני על הקו הנגדי
+                    float ratio = (i - starCount / 2) / (float) (starCount / 2);
+                    t = perimeter - len + len * ratio;
+                }
+
+                Point p = pointOnRectPerimeter(x, y, w, h, t, perimeter);
+
+                float alpha = 0.4f + 0.6f *
+                        (float) Math.abs(Math.sin(phase * 1.4f + i));
+                g2.setColor(new Color(255, 255, 210, (int) (alpha * 255)));
+
+                int size = 5;
+                int cx = p.x;
+                int cy = p.y;
+
+                g2.setStroke(new BasicStroke(1.4f,
+                        BasicStroke.CAP_ROUND,
+                        BasicStroke.JOIN_ROUND));
+                g2.drawLine(cx - size, cy, cx + size, cy);
+                g2.drawLine(cx, cy - size, cx, cy + size);
+            }
+        }
+
+        // נקודה על היקף הריבוע לפי אורך t
+        private Point pointOnRectPerimeter(int x, int y, int w, int h,
+                                           float t, float perimeter) {
+
+            float d = t % perimeter;
+
+            // עליון
+            if (d <= w) {
+                return new Point(x + Math.round(d), y);
+            }
+            d -= w;
+
+            // ימני
+            if (d <= h) {
+                return new Point(x + w, y + Math.round(d));
+            }
+            d -= h;
+
+            // תחתון
+            if (d <= w) {
+                return new Point(x + w - Math.round(d), y + h);
+            }
+            d -= w;
+
+            // שמאלי
+            return new Point(x, y + h - Math.round(d));
+        }
+    }
+
+
+
+
 
 		updateTimeLabel();
 
@@ -1842,4 +2740,5 @@ public class MinesweeperGUI extends JPanel {
 	        g2.dispose();
 	    }
 	}
+
 }
