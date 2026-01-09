@@ -4,6 +4,10 @@ import model.*;
 import view.MinesweeperGUI;
 import view.QuestionDialog;
 
+import javax.swing.Timer;
+import java.awt.Point;
+import java.util.List;
+
 public class MinesweeperController {
 
     private final Board board1;
@@ -36,25 +40,36 @@ public class MinesweeperController {
     public GameSession getSession() { return session; }
     public boolean isPlayer1Turn() { return player1Turn; }
 
-    // Timer API
+    // ===== Timer API =====
     public void startGameTimer() {
         gameStartMillis = System.currentTimeMillis();
         paused = false;
         pausedAtMillis = 0L;
         totalPausedMillis = 0L;
+
+        // ✅ מתחילים מוזיקת משחק
+        SoundManager.getInstance().playGameLoop();
     }
 
     public void togglePause() {
         if (gameStartMillis == 0L) return;
 
         long now = System.currentTimeMillis();
+        SoundManager sm = SoundManager.getInstance();
+
         if (!paused) {
             paused = true;
             pausedAtMillis = now;
+
+            // ✅ עוצרים מוזיקת רקע בזמן pause
+            sm.stopBgm();
         } else {
             paused = false;
             totalPausedMillis += (now - pausedAtMillis);
             pausedAtMillis = 0L;
+
+            // ✅ מחזירים מוזיקת משחק
+            sm.playGameLoop();
         }
     }
 
@@ -69,7 +84,7 @@ public class MinesweeperController {
         return Math.max(0L, elapsed);
     }
 
-    // Click handling
+    // ===== Click handling =====
     public void handleLeftClick(boolean firstBoard, int row, int col) {
         if (paused) return;
 
@@ -81,15 +96,15 @@ public class MinesweeperController {
         // activate question/surprise
         if (board.canActivateSpecial(row, col)) {
 
-        	if (!session.canPayForPower()) {
-        	    boolean isQuestionTile = (cell.getType() == CellType.QUESTION);
-        	    int cost = session.getDifficulty().getPowerCost();
-        	    int current = session.getScore();
+            if (!session.canPayForPower()) {
+                boolean isQuestionTile = (cell.getType() == CellType.QUESTION);
+                int cost = session.getDifficulty().getPowerCost();
+                int current = session.getScore();
 
-        	    view.showNotEnoughPointsOverlay(isQuestionTile, cost, current);
-        	    view.refreshView();
-        	    return;
-        	}
+                view.showNotEnoughPointsOverlay(isQuestionTile, cost, current);
+                view.refreshView();
+                return;
+            }
 
             // Question bank empty?
             if (cell.getType() == CellType.QUESTION) {
@@ -116,7 +131,7 @@ public class MinesweeperController {
             int payDeltaScore = scoreAfterPay - scoreBeforePay;
             int payDeltaLives = livesAfterPay - livesBeforePay; // usually 0
 
-         // SURPRISE
+            // ===== SURPRISE =====
             if (cell.getType() == CellType.SURPRISE) {
                 boolean good = Math.random() < 0.5;
 
@@ -126,24 +141,50 @@ public class MinesweeperController {
                 int outcomeDeltaScore = session.getScore() - scoreAfterPay;
                 int outcomeDeltaLives = session.getLives() - livesAfterPay;
 
+                // ✅ ננגן את הסאונד *אחרי* שהמתנה נפתחת (בערך אחרי 350ms)
+                SoundManager sm = SoundManager.getInstance();
+                int SOUND_DELAY_MS = 350; // אותו זמן כמו ה-Timer הראשון בגיפט
+
+                Timer soundTimer = new Timer(SOUND_DELAY_MS, e -> {
+                    if (good) sm.playGoodSurpriseThenResumeGame();
+                    else sm.playBadSurpriseThenResumeGame();
+                    ((Timer) e.getSource()).stop();
+                });
+                soundTimer.setRepeats(false);
+                soundTimer.start();
+
+                // ✅ האנימציה + האוברליי, ורק בסוף – endTurn (ואז הקו הזהב של השחקן הבא)
                 view.playGiftCenterAndShowOverlay(
                         good ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
                         good ? "GOOD SURPRISE!" : "BAD SURPRISE!",
                         formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, null),
                         OVERLAY_SECONDS,
-                        this::endTurn   // ✅ endTurn runs ONLY after animation finishes
+                        this::endTurn
                 );
-
                 return;
+
             }
 
-            // QUESTION
+            // ===== QUESTION =====
             if (cell.getType() == CellType.QUESTION) {
+
+                SoundManager sm = SoundManager.getInstance();
+
+                // ✅ מתחילים מוזיקת שאלה בלופ
+                sm.playQuestionLoop();
+
                 Question q = QuestionBank.getInstance().getRandomQuestion();
+
+                // בזמן הדיאלוג מוזיקת השאלה רצה
                 boolean correct = QuestionDialog.showQuestionDialog(view, q);
+
+                // ✅ כשהדיאלוג נסגר: מפסיקים BGM שאלה ומנגנים תוצאה ואז חזרה למשחק
+                if (correct) sm.playCorrectFor5SecondsThenResumeGame();
+                else sm.playWrongThenResumeGame();
 
                 QuestionBonusEffect bonus = session.applyQuestionResult(q.getLevel(), correct);
 
+                // בונוסים (REVEAL_MINE / REVEAL_3X3) נשארים כמו אצלך
                 if (bonus == QuestionBonusEffect.REVEAL_MINE) {
                     board.revealRandomMine();
                 } else if (bonus == QuestionBonusEffect.REVEAL_3X3) {
@@ -156,14 +197,17 @@ public class MinesweeperController {
                 int outcomeDeltaLives = session.getLives() - livesAfterPay;
 
                 view.refreshView();
-                view.showQuestionResultOverlay(
-                	    correct ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
-                	    correct ? "CORRECT ANSWER!" : "WRONG ANSWER!",
-                	    formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, bonus),
-                	    OVERLAY_SECONDS
-                	);
-                endTurn();
+
+                // ✅ עכשיו: קודם מציגים את התוצאה, ורק אחרי X שניות עושים endTurn
+                view.showQuestionResultOverlayAndThen(
+                        correct ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
+                        correct ? "CORRECT ANSWER!" : "WRONG ANSWER!",
+                        formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, bonus),
+                        OVERLAY_SECONDS,
+                        this::endTurn   // יעבור לשחקן הבא *רק אחרי* שהמסך נסגר
+                );
                 return;
+
             }
 
             // fallback
@@ -178,9 +222,8 @@ public class MinesweeperController {
             return;
         }
 
-        // normal open
-        board.openCell(row, col, session);
-        endTurn();
+        // ===== פתיחה רגילה – עם קסקייד מונפש =====
+        startCascadeOpen(board, row, col);
     }
 
     public void handleRightClick(boolean firstBoard, int row, int col) {
@@ -197,14 +240,74 @@ public class MinesweeperController {
         endTurn();
     }
 
+    /**
+     * פתיחת תא (כולל קסקייד) עם אנימציה:
+     * – אם זה רק תא אחד → מתנהג כמו openCell רגיל.
+     * – אם יש קסקייד אמיתי (הרבה תאים) → פותח תא-תא בטיימר.
+     */
+    private void startCascadeOpen(Board board, int row, int col) {
+
+        // קודם מחשבים מה היה קורה בקסקייד רגיל
+        List<Point> cascade = board.computeCascadeOrder(row, col);
+
+        // אין קסקייד? (או רק תא אחד) – מתנהג כמו קודם
+        if (cascade == null || cascade.size() <= 1) {
+            board.openCell(row, col, session);
+            view.refreshView();
+            endTurn();
+            return;
+        }
+
+        // נועל את הלוחות בזמן האנימציה
+        view.setBoardsEnabled(false);
+
+        final int[] index = {0};
+        int delayMs = 60; // כמה מילישניות בין תא לתא – אפשר לשחק עם זה
+
+        Timer t = new Timer(delayMs, e -> {
+
+            // סיימנו את כל התאים
+            if (index[0] >= cascade.size()) {
+                ((Timer) e.getSource()).stop();
+
+                view.refreshView();
+                view.setBoardsEnabled(true);
+                endTurn();   // פה יקרה גם קו זהב לשחקן הבא
+                return;
+            }
+
+            Point p = cascade.get(index[0]++);
+
+            // פותחים תא בודד – עם ניקוד/חיים
+            board.revealSingleCell(p.x, p.y, session);
+
+            view.refreshView();
+
+            // אם במהלך הקסקייד נגמרו חיים או נגמר המשחק – לעצור מיד:
+            if (session.isOutOfLives()
+                    || board1.allMinesRevealed()
+                    || board2.allMinesRevealed()) {
+
+                ((Timer) e.getSource()).stop();
+                view.setBoardsEnabled(true);
+                endTurn(); // endTurn כבר יזהה GAME OVER ויפתח דיאלוג
+            }
+        });
+
+        t.setRepeats(true);
+        t.start();
+    }
+
     private void endTurn() {
         view.refreshView();
 
         if (board1.allMinesRevealed() || board2.allMinesRevealed()) {
+            SoundManager.getInstance().stopBgm();
             view.showGameOver(true);
             return;
         }
         if (session.isOutOfLives()) {
+            SoundManager.getInstance().stopBgm();
             view.showGameOver(false);
             return;
         }
@@ -220,18 +323,15 @@ public class MinesweeperController {
 
         StringBuilder sb = new StringBuilder();
 
-        // Activation (cost)
         if (payDeltaScore != 0 || payDeltaLives != 0) {
             sb.append("Activation: ")
               .append(formatDelta(payDeltaScore, payDeltaLives));
         }
 
-        // Outcome
         if (sb.length() > 0) sb.append("  |  ");
         sb.append("Outcome: ")
           .append(formatDelta(outcomeDeltaScore, outcomeDeltaLives));
 
-        // Bonus (optional)
         if (bonus != null && bonus != QuestionBonusEffect.NONE) {
             sb.append("  |  Bonus: ").append(shortBonusName(bonus));
         }

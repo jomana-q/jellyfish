@@ -1,5 +1,6 @@
 package model;
 
+import java.awt.Point;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -221,6 +222,101 @@ public class Board {
         }
     }
 
+    // ---------- לוגיקת קסקייד מונפש ----------
+
+    /**
+     * מחשב את סדר התאים שהיו נפתחים ע"י revealRecursive,
+     * אבל בלי באמת לשנות את ה-grid (רק מחזיר רשימת נקודות).
+     */
+    public List<Point> computeCascadeOrder(int row, int col) {
+        List<Point> result = new ArrayList<>();
+
+        if (!isInBounds(row, col)) {
+            return result;
+        }
+
+        boolean[][] visited = new boolean[rows][cols];
+        computeCascadeRecursive(row, col, visited, result);
+        return result;
+    }
+
+    private void computeCascadeRecursive(int row, int col,
+                                         boolean[][] visited,
+                                         List<Point> out) {
+        if (!isInBounds(row, col)) return;
+        if (visited[row][col]) return;
+
+        Cell cell = grid[row][col];
+
+        // אותו תנאי כמו ב-revealRecursive
+        if (cell.isRevealed() || cell.isFlagged()) {
+            return;
+        }
+
+        visited[row][col] = true;
+        out.add(new Point(row, col));
+
+        // מוקש → ב-revealRecursive עוצרים כאן, בלי קסקייד
+        if (cell.getType() == CellType.MINE) {
+            return;
+        }
+
+        // רק תאים "ריקים" ממשיכים קסקייד (EMPTY/QUESTION/SURPRISE)
+        boolean zeroCell =
+                cell.getType() == CellType.EMPTY ||
+                cell.getType() == CellType.QUESTION ||
+                cell.getType() == CellType.SURPRISE;
+
+        if (!zeroCell) {
+            // NUMBER, למשל – מגלים רק אותו, בלי שכנים
+            return;
+        }
+
+        // קסקייד לשכנים (בדיוק כמו בלוגיקה המקורית)
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+
+                if (dr == 0 && dc == 0) continue;
+
+                int nr = row + dr;
+                int nc = col + dc;
+
+                if (!isInBounds(nr, nc)) continue;
+
+                Cell neighbor = grid[nr][nc];
+
+                if (neighbor.isRevealed() || neighbor.isFlagged()) continue;
+                if (neighbor.getType() == CellType.MINE) continue;
+
+                computeCascadeRecursive(nr, nc, visited, out);
+            }
+        }
+    }
+
+    /**
+     * פתיחה של תא אחד בלבד (בלי קסקייד),
+     * עם אותה לוגיקת ניקוד/חיים של revealRecursive.
+     */
+    public void revealSingleCell(int row, int col, GameSession session) {
+        if (!isInBounds(row, col)) return;
+
+        Cell cell = grid[row][col];
+
+        if (cell.isRevealed() || cell.isFlagged()) {
+            return;
+        }
+
+        cell.setRevealed(true);
+
+        if (cell.getType() == CellType.MINE) {
+            session.decreaseLives();
+            return;
+        }
+
+        // כל תא שאינו מוקש: +1 נקודה (כמו ב-revealRecursive)
+        session.updateScore(+1);
+    }
+
     /**
      * סימון / ביטול סימון בדגל.
      *  - Mine מסומן בדגל → pts+1  + חשיפת המוקש
@@ -259,7 +355,6 @@ public class Board {
                 break;
         }
     }
-
     /**
      * בדיקה אם ניתן להפעיל משבצת שאלה/הפתעה:
      *  - התא נחשף
@@ -279,6 +374,7 @@ public class Board {
         Cell cell = getCell(row, col);
         cell.setPowerUsed(true);
     }
+
 
     // פונקציה אופציונלית – חישוב ניקוד לדגל (אם תרצי להשתמש בה במקום toggleFlag)
     public FlagResult flagCell(int row, int col) {
@@ -364,7 +460,7 @@ public class Board {
 
         return new ActivationResult(true, "Activated", points, hearts);
     }
-    
+
     public boolean revealRandomMine() {
         List<int[]> hiddenMines = new ArrayList<>();
 
@@ -384,7 +480,7 @@ public class Board {
 
         return true;
     }
-    
+
     public void revealRandom3x3(GameSession session) {
         int r = random.nextInt(rows);
         int c = random.nextInt(cols);
@@ -397,14 +493,18 @@ public class Board {
                 if (!isInBounds(nr, nc)) continue;
 
                 Cell cell = grid[nr][nc];
-                if (!cell.isRevealed() && !cell.isFlagged()) {
-                    // השימוש ב-openCell מבטיח שקבלת נקודות תהיה תקינה
-                    openCell(nr, nc, session);
+
+                // לא נוגעים בתאים שכבר נחשפו או מסומנים בדגל
+                if (cell.isRevealed() || cell.isFlagged()) {
+                    continue;
                 }
+
+                // ✅ רק חושפים – בלי נקודות, בלי חיים, בלי קסקדה
+                cell.setRevealed(true);
             }
         }
     }
-    
+
     /**
      * בדיקה אם כל המוקשים על הלוח כבר נחשפו.
      * במשחק שלך, כשמסמנים מוקש בדגל את כבר מסמנת אותו כ-revealed,
@@ -421,7 +521,7 @@ public class Board {
         }
         return true; // כל המוקשים גלו
     }
-    
+
     /**
      * סוף משחק: לחשוף את כל התאים על הלוח,
      * בלי לעדכן ניקוד / לבבות (רק setRevealed).
@@ -434,6 +534,4 @@ public class Board {
             }
         }
     }
-
-
 }

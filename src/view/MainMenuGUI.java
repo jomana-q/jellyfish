@@ -1,6 +1,7 @@
 package view;
 
 import controller.MinesweeperController;
+import controller.SoundManager;
 import model.Board;
 import model.Difficulty;
 import model.GameSession;
@@ -92,6 +93,8 @@ public class MainMenuGUI extends JFrame {
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
         setVisible(true);
+        SoundManager.getInstance().playMenuLoop();
+
     }
 
     /**
@@ -289,6 +292,7 @@ public class MainMenuGUI extends JFrame {
 
     /** חזרה למסך הראשי */
     public void showMainMenu() {
+    	SoundManager.getInstance().playMenuLoop(); // ✅ להתחיל/להחזיר קול תפריט
         centerLayout.show(centerContainer, "MENU");
     }
     
@@ -433,12 +437,14 @@ public class MainMenuGUI extends JFrame {
 
     /** פתיחת מסך ההגדרות (Settings) */
     public void openSettingsPage() {
+        SoundManager.getInstance().playMenuLoop(); // ✅ להשאיר מוזיקת תפריט גם בהגדרות
         if (settingsPanel == null) {
             settingsPanel = new SettingsPanel(this);
             centerContainer.add(settingsPanel, "SETTINGS");
         }
         centerLayout.show(centerContainer, "SETTINGS");
     }
+
 
     private void openAdminDashboard() {
         JOptionPane.showMessageDialog(this, "Admin Login");
