@@ -120,8 +120,8 @@ public class SettingsPanel extends JPanel {
         cardPanel.add(themeLabel, gbc);
 
         gbc.gridx = 1;
-        cardPanel.add(themeBox, gbc);
-
+        cardPanel.add(themeBox, gbc); // הוספת כפתור הטוגל לפאנל
+        
         centerWrapper.add(cardPanel);
         add(centerWrapper, BorderLayout.CENTER);
 

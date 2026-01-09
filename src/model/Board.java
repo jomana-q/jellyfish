@@ -149,53 +149,56 @@ public class Board {
 
     /** חשיפת תא ע"י השחקן. */
     public void openCell(int row, int col, GameSession session) {
-        if (!isInBounds(row, col)) {
-            return;
-        }
-        revealRecursive(row, col, session);
+        if (!isInBounds(row, col)) return;
+
+        // שחקן: כן ניקוד, כן קסקדה
+        revealRecursive(row, col, session, true, true, true);
     }
 
-    // פונקציה פנימית רקורסיבית (לחשיפה + קסקדה)
-    private void revealRecursive(int row, int col, GameSession session) {
-        if (!isInBounds(row, col)) {
-            return;
-        }
+    /**
+     * חשיפה פנימית: אפשר לשלוט אם נותנים נקודות ואם עושים קסקדה.
+     */
+    private void revealRecursive(int row, int col, GameSession session,
+            boolean awardPoints,
+            boolean allowCascade,
+            boolean playerClick) {
+
+        if (!isInBounds(row, col)) return;
 
         Cell cell = grid[row][col];
 
         // לא חושפים שוב תא שכבר נפתח או מסומן בדגל
-        if (cell.isRevealed() || cell.isFlagged()) {
-            return;
-        }
+        if (cell.isRevealed() || cell.isFlagged()) return;
 
         // מסמנים כחשוף
         cell.setRevealed(true);
 
-        // מוקש → מפסידים חיים, בלי נקודות, בלי קסקדה
         if (cell.getType() == CellType.MINE) {
-            session.decreaseLives();
+            if (playerClick) {
+                session.decreaseLives();
+            }
             return;
         }
 
-        // כל תא שאינו מוקש → נקודה אחת
-        session.updateScore(+1);
+
+        // כל תא שאינו מוקש → נקודה אחת רק אם זו חשיפה "רגילה"
+        if (awardPoints) {
+            session.updateScore(+1);
+        }
+
+        // קסקדה רק אם מותר
+        if (!allowCascade) return;
 
         // נמשיך קסקדה **רק** מתאים שאין לידם מוקשים:
-        // EMPTY / QUESTION / SURPRISE (שנבחרו ממשבצות ריקות)
         boolean zeroCell =
                 cell.getType() == CellType.EMPTY ||
                 cell.getType() == CellType.QUESTION ||
                 cell.getType() == CellType.SURPRISE;
 
-        // אם זה מספר (NUMBER) – נפתח אבל לא ממשיך קסקדה
-        if (!zeroCell) {
-            return;
-        }
+        if (!zeroCell) return;
 
-        // קסקדה: עוברים על כל השכנים, כל עוד הם לא מוקש
         for (int dr = -1; dr <= 1; dr++) {
             for (int dc = -1; dc <= 1; dc++) {
-
                 if (dr == 0 && dc == 0) continue;
 
                 int nr = row + dr;
@@ -205,19 +208,11 @@ public class Board {
 
                 Cell neighbor = grid[nr][nc];
 
-                // מדלגים על תאים שכבר נפתחו או מסומנים בדגל
-                if (neighbor.isRevealed() || neighbor.isFlagged()) {
-                    continue;
-                }
+                if (neighbor.isRevealed() || neighbor.isFlagged()) continue;
+                if (neighbor.getType() == CellType.MINE) continue;
 
-                // לא מריצים קסקדה אל מוקש
-                if (neighbor.getType() == CellType.MINE) {
-                    continue;
-                }
-
-                // ניגש שוב רקורסיבית – הוא יקבל נקודה,
-                // ואם גם הוא "ריק" (EMPTY/QUESTION/SURPRISE) הוא ימשיך את הקסקדה
-                revealRecursive(nr, nc, session);
+                // בקסקדה עדיין נותנים נקודות (זה חלק מחשיפת שחקן)
+                revealRecursive(nr, nc, session, true, true, false);
             }
         }
     }
@@ -467,7 +462,7 @@ public class Board {
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
                 Cell cell = grid[r][c];
-                if (cell.getType() == CellType.MINE && !cell.isRevealed()) {
+                if (cell.getType() == CellType.MINE && !cell.isRevealed() && !cell.isFlagged()) {
                     hiddenMines.add(new int[]{r, c});
                 }
             }
@@ -476,8 +471,7 @@ public class Board {
         if (hiddenMines.isEmpty()) return false;
 
         int[] pos = hiddenMines.get(random.nextInt(hiddenMines.size()));
-        grid[pos[0]][pos[1]].setRevealed(true);
-
+        grid[pos[0]][pos[1]].setRevealed(true); // אפקט אוטומטי: בלי ניקוד ובלי חיים
         return true;
     }
 

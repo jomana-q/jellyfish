@@ -27,6 +27,12 @@ public class ThemeManager {
     public Color getTextColor() {
         return isDarkMode ? Color.WHITE : new Color(30, 30, 30);
     }
+    /** Special color for Titles (Headers) */
+    public Color getTitleColor() {
+        // Dark Mode: White
+        // Light Mode: Vibrant Blue 
+        return isDarkMode ? Color.WHITE : new Color(60, 100, 200);
+    }
 
     // Boards (closed cells colors)
 

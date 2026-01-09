@@ -235,7 +235,25 @@ public class MinesweeperController {
         if (cell.isRevealed()) return;
         if (cell.isPowerUsed()) return;
 
+        int minesBefore = countRevealedMines(board1) + countRevealedMines(board2);
+        int livesBefore = session.getLives();
+        int scoreBefore = session.getScore();
+
         board.toggleFlag(row, col, session);
+
+        int minesAfter = countRevealedMines(board1) + countRevealedMines(board2);
+        int livesAfter = session.getLives();
+        int scoreAfter = session.getScore();
+
+        showMineToastIfChanged(minesBefore, minesAfter, livesBefore, livesAfter, scoreBefore, scoreAfter);
+
+        // אם לא נחשף מוקש, עדיין אפשר הודעה על דגל (אופציונלי)
+        if (minesAfter == minesBefore) {
+            int d = scoreAfter - scoreBefore;
+            if (d < 0) view.showToast("Wrong flag ❌ (" + d + " score)", 1600);
+            else view.showToast("Flag placed 🚩", 1200);
+        }
+
         view.refreshView();
         endTurn();
     }
@@ -245,7 +263,8 @@ public class MinesweeperController {
      * – אם זה רק תא אחד → מתנהג כמו openCell רגיל.
      * – אם יש קסקייד אמיתי (הרבה תאים) → פותח תא-תא בטיימר.
      */
-    private void startCascadeOpen(Board board, int row, int col) {
+   private void startCascadeOpen(Board board, int row, int col) {
+ 
 
         // קודם מחשבים מה היה קורה בקסקייד רגיל
         List<Point> cascade = board.computeCascadeOrder(row, col);
@@ -361,5 +380,33 @@ public class MinesweeperController {
             case REVEAL_3X3 -> "Reveal 3x3";
             default -> b.name();
         };
+    }
+    
+    private int countRevealedMines(Board b) {
+        int count = 0;
+        for (int r = 0; r < b.getRows(); r++) {
+            for (int c = 0; c < b.getCols(); c++) {
+                Cell cell = b.getCell(r, c);
+                if (cell.getType() == CellType.MINE && cell.isRevealed()) count++;
+            }
+        }
+        return count;
+    }
+
+    private void showMineToastIfChanged(int minesBefore, int minesAfter, int livesBefore, int livesAfter, int scoreBefore, int scoreAfter) {
+        int dMines  = minesAfter - minesBefore;
+        int dLives  = livesAfter - livesBefore;
+        int dScore  = scoreAfter - scoreBefore;
+
+        if (dMines <= 0) return; // no new mine revealed
+
+        // Mine got revealed somehow (left click or correct flag)
+        if (dLives < 0) {
+            view.showToast("Oops! You hit a mine 💥  (-1 life)", 1700);
+        } else if (dScore > 0) {
+            view.showToast("Nice! Mine flagged 💎  (+" + dScore + " score)", 1700);
+        } else {
+            view.showToast("Mine revealed 💥", 1400);
+        }
     }
 }
