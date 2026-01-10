@@ -35,14 +35,14 @@ public class QuestionDialog {
     // overlay
     private static final Color OVERLAY_DARK = new Color(0, 0, 0, 155);
 
-    // fonts 
+    // fonts
     private static final Font FONT_TITLE    = new Font("Segoe UI", Font.BOLD, 24);
     private static final Font FONT_QUESTION = new Font("Segoe UI", Font.BOLD, 20);
     private static final Font FONT_ANS      = new Font("Segoe UI", Font.PLAIN, 15);
     private static final Font FONT_BADGE    = new Font("Segoe UI", Font.BOLD, 14);
     private static final Font FONT_SMALL    = new Font("Segoe UI", Font.BOLD, 14);
-    
-    // result colors (correct/incorrect)
+
+    // result colors (correct / incorrect)
     private static final Color CORRECT_BG     = new Color(210, 255, 220, 245);
     private static final Color CORRECT_BORDER = new Color(60, 180, 95, 220);
     private static final Color WRONG_BG       = new Color(255, 220, 220, 245);
@@ -57,9 +57,10 @@ public class QuestionDialog {
         dialog.setBackground(new Color(0, 0, 0, 0));
         dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-        // ===== Full-screen overlay panel =====
+        // ===== full-screen overlay =====
         JPanel overlay = new JPanel(new GridBagLayout()) {
-            @Override protected void paintComponent(Graphics g) {
+            @Override
+            protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 applyTextHints(g2);
@@ -71,18 +72,18 @@ public class QuestionDialog {
         overlay.setOpaque(false);
         overlay.setBorder(new EmptyBorder(24, 24, 24, 24));
 
-        // center card
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0; gbc.gridy = 0;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.CENTER;
 
-        // Card 
+        // ===== card =====
         GlassCard card = new GlassCard();
         card.setPreferredSize(new Dimension(CARD_W, CARD_H));
         card.setLayout(new BorderLayout());
         card.setBorder(new EmptyBorder(16, 18, 14, 18));
 
-        // Header 
+        // ----- header -----
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
 
@@ -106,14 +107,14 @@ public class QuestionDialog {
         left.add(icon);
         left.add(title);
 
-     // right (level + timer + close)
+        // right (STATIC level chip + timer + close) – לא משתמשים ב־QuestionLevel
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
-        right.setPreferredSize(new Dimension(270, 42)); // was 180 -> caused wrapping
+        right.setPreferredSize(new Dimension(270, 42));
 
-        LevelChip levelChip = new LevelChip(levelLabel(q.getLevel()));
+        LevelChip levelChip = new LevelChip("LEVEL"); // כרגע טקסט קבוע, בלי enum
         TimeChip timeChip   = new TimeChip(TOTAL_SECONDS);
-        CloseIconButton close = new CloseIconButton(); // keep default size (34x34)
+        CloseIconButton close = new CloseIconButton();
 
         right.add(levelChip);
         right.add(timeChip);
@@ -123,8 +124,11 @@ public class QuestionDialog {
         header.add(right, BorderLayout.EAST);
         header.setPreferredSize(new Dimension(1, 52));
 
-        // Question text 
-        JLabel questionLbl = new JLabel(wrapHtml(safe(q.getQuestionText()), 46), SwingConstants.CENTER);
+        // ----- question text -----
+        JLabel questionLbl = new JLabel(
+                wrapHtml(safe(q.getQuestionText()), 46),
+                SwingConstants.CENTER
+        );
         questionLbl.setFont(FONT_QUESTION);
         questionLbl.setForeground(QUESTION_TXT);
         questionLbl.setBorder(new EmptyBorder(14, 22, 10, 22));
@@ -132,10 +136,12 @@ public class QuestionDialog {
 
         // divider line
         JComponent divider = new JComponent() {
-            @Override protected void paintComponent(Graphics g) {
+            @Override
+            protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 applyTextHints(g2);
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(new Color(90, 155, 220, 120));
                 int w = getWidth();
                 g2.fillRoundRect(70, 0, Math.max(0, w - 140), 2, 2, 2);
@@ -145,7 +151,7 @@ public class QuestionDialog {
         divider.setPreferredSize(new Dimension(1, 12));
         divider.setOpaque(false);
 
-        // Answers 
+        // ----- answers -----
         JPanel answers = new JPanel(new GridLayout(2, 2, 14, 14));
         answers.setOpaque(false);
         answers.setBorder(new EmptyBorder(10, 12, 10, 12));
@@ -166,7 +172,7 @@ public class QuestionDialog {
         answers.add(btnC);
         answers.add(btnD);
 
-        // Progress bar
+        // progress bar
         TimeBar timeBar = new TimeBar(TOTAL_SECONDS);
         timeBar.setPreferredSize(new Dimension(1, 10));
 
@@ -186,17 +192,18 @@ public class QuestionDialog {
         overlay.add(card, gbc);
         dialog.setContentPane(overlay);
 
-        // Logic
+        // ===== logic =====
         final boolean[] answered = { false };
         final boolean[] result   = { false };
 
+        // close button ends as "wrong"/timeout
         close.addActionListener(e -> {
             answered[0] = true;
             result[0] = false;
             dialog.dispose();
         });
 
-        // Timer
+        // countdown timer
         final int[] leftSec = { TOTAL_SECONDS };
         timeChip.setSeconds(leftSec[0]);
         timeBar.setSecondsLeft(leftSec[0]);
@@ -216,11 +223,11 @@ public class QuestionDialog {
         t.setInitialDelay(1000);
         t.start();
 
+        // picking an answer
         ActionListener pick = ae -> {
             if (answered[0]) return;
             answered[0] = true;
 
-            // stop timer so user sees the result
             if (t.isRunning()) t.stop();
 
             btnA.setEnabled(false);
@@ -237,14 +244,19 @@ public class QuestionDialog {
             if (src == btnC) chosenIdx = 2;
             if (src == btnD) chosenIdx = 3;
 
-            // always show the correct one in green
+            // mark correct one
             int correctIdx = -1;
             for (int i = 0; i < 4; i++) {
-                if (q.isCorrect(i)) { correctIdx = i; break; }
+                if (q.isCorrect(i)) {
+                    correctIdx = i;
+                    break;
+                }
             }
-            if (correctIdx != -1) cards[correctIdx].markCorrect();
+            if (correctIdx != -1) {
+                cards[correctIdx].markCorrect();
+            }
 
-            // mark chosen (green if correct, red if wrong)
+            // mark chosen
             if (chosenIdx != -1) {
                 cards[chosenIdx].setChosen(true);
                 if (!q.isCorrect(chosenIdx)) {
@@ -256,7 +268,7 @@ public class QuestionDialog {
 
             result[0] = (chosenIdx != -1) && q.isCorrect(chosenIdx);
 
-            // keep dialog open briefly so colors are visible
+            // keep dialog visible a bit to see colors
             Timer closeLater = new Timer(900, ev -> dialog.dispose());
             closeLater.setRepeats(false);
             closeLater.start();
@@ -275,7 +287,8 @@ public class QuestionDialog {
         );
 
         dialog.addWindowListener(new WindowAdapter() {
-            @Override public void windowClosed(WindowEvent e) {
+            @Override
+            public void windowClosed(WindowEvent e) {
                 if (t.isRunning()) t.stop();
             }
         });
@@ -293,9 +306,11 @@ public class QuestionDialog {
         return result[0];
     }
 
-    // helpers
+    // ===== helpers =====
 
-    private static String safe(String s) { return (s == null) ? "" : s.trim(); }
+    private static String safe(String s) {
+        return (s == null) ? "" : s.trim();
+    }
 
     private static String wrapHtml(String text, int maxCharsPerLine) {
         if (text == null) return "";
@@ -314,32 +329,97 @@ public class QuestionDialog {
     }
 
     private static void applyTextHints(Graphics2D g2) {
-        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS,
+                RenderingHints.VALUE_FRACTIONALMETRICS_ON);
     }
 
-    // UI components
+    private static void understandingStroke(Graphics2D g2, float w) {
+        g2.setStroke(new BasicStroke(w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+    }
+
+    private static String[] wrapTwoLines(String text, FontMetrics fm, int maxW) {
+        if (text == null) return new String[] { "", "" };
+        text = text.trim();
+        if (text.isEmpty()) return new String[] { "", "" };
+
+        java.util.List<String> words = java.util.Arrays.asList(text.split("\\s+"));
+        StringBuilder line1 = new StringBuilder();
+        StringBuilder line2 = new StringBuilder();
+
+        int i = 0;
+        for (; i < words.size(); i++) {
+            String w = words.get(i);
+            String candidate = (line1.length() == 0) ? w : (line1 + " " + w);
+            if (fm.stringWidth(candidate) <= maxW) {
+                line1.setLength(0);
+                line1.append(candidate);
+            } else {
+                break;
+            }
+        }
+
+        for (; i < words.size(); i++) {
+            String w = words.get(i);
+            String candidate = (line2.length() == 0) ? w : (line2 + " " + w);
+            if (fm.stringWidth(candidate) <= maxW) {
+                line2.setLength(0);
+                line2.append(candidate);
+            } else {
+                break;
+            }
+        }
+
+        if (i < words.size()) {
+            String base = line2.toString();
+            if (base.isEmpty()) base = line1.toString();
+            if (base.isEmpty()) base = words.get(0);
+
+            String trimmed = base;
+            while (trimmed.length() > 2 && fm.stringWidth(trimmed + "...") > maxW) {
+                trimmed = trimmed.substring(0, trimmed.length() - 1);
+            }
+            line2.setLength(0);
+            line2.append(trimmed).append("...");
+        }
+
+        return new String[] { line1.toString(), line2.toString() };
+    }
+
+    private static String cutToWidth(String text, FontMetrics fm, int maxW) {
+        if (text == null) return "";
+        text = text.trim();
+        if (fm.stringWidth(text) <= maxW) return text;
+
+        String s = text;
+        while (s.length() > 2 && fm.stringWidth(s + "...") > maxW) {
+            s = s.substring(0, s.length() - 1);
+        }
+        return s + "...";
+    }
+
+    // ===== inner UI classes =====
 
     private static class GlassCard extends JPanel {
-        @Override protected void paintComponent(Graphics g) {
+        @Override
+        protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             Graphics2D g2 = (Graphics2D) g.create();
             applyTextHints(g2);
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
 
             int w = getWidth();
             int h = getHeight();
             int arc = 18;
 
-            // shadow
             g2.setColor(new Color(0, 0, 0, 65));
             g2.fillRoundRect(10, 12, w - 16, h - 16, arc, arc);
 
-            // glass bg
             g2.setColor(CARD_BG);
             g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
 
-            // border
             g2.setColor(CARD_BORDER);
             understandingStroke(g2, 3f);
             g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
@@ -348,11 +428,6 @@ public class QuestionDialog {
         }
     }
 
-    private static void understandingStroke(Graphics2D g2, float w) {
-        g2.setStroke(new BasicStroke(w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-    }
-
-    // timer chip
     private static class TimeChip extends JComponent {
         private int seconds;
 
@@ -369,10 +444,12 @@ public class QuestionDialog {
             repaint();
         }
 
-        @Override protected void paintComponent(Graphics g) {
+        @Override
+        protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             applyTextHints(g2);
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
 
             int w = getWidth();
             int h = getHeight();
@@ -404,7 +481,6 @@ public class QuestionDialog {
         }
     }
 
-    // close button
     private static class CloseIconButton extends JButton {
         private boolean hover = false;
         private boolean down  = false;
@@ -417,7 +493,6 @@ public class QuestionDialog {
             setOpaque(false);
             setCursor(new Cursor(Cursor.HAND_CURSOR));
             setToolTipText("Close");
-
             setRolloverEnabled(false);
             setBorder(BorderFactory.createEmptyBorder());
 
@@ -429,10 +504,12 @@ public class QuestionDialog {
             });
         }
 
-        @Override protected void paintComponent(Graphics g) {
+        @Override
+        protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             applyTextHints(g2);
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
 
             int w = getWidth();
             int h = getHeight();
@@ -450,68 +527,6 @@ public class QuestionDialog {
 
             g2.dispose();
         }
-    }
-    
-    private static String[] wrapTwoLines(String text, FontMetrics fm, int maxW) {
-        if (text == null) return new String[]{"", ""};
-        text = text.trim();
-        if (text.isEmpty()) return new String[]{"", ""};
-
-        java.util.List<String> words = java.util.Arrays.asList(text.split("\\s+"));
-        StringBuilder line1 = new StringBuilder();
-        StringBuilder line2 = new StringBuilder();
-
-        // build line1
-        int i = 0;
-        for (; i < words.size(); i++) {
-            String w = words.get(i);
-            String candidate = line1.length() == 0 ? w : (line1 + " " + w);
-            if (fm.stringWidth(candidate) <= maxW) {
-                line1.setLength(0);
-                line1.append(candidate);
-            } else {
-                break;
-            }
-        }
-
-        // build line2
-        for (; i < words.size(); i++) {
-            String w = words.get(i);
-            String candidate = line2.length() == 0 ? w : (line2 + " " + w);
-            if (fm.stringWidth(candidate) <= maxW) {
-                line2.setLength(0);
-                line2.append(candidate);
-            } else {
-                break;
-            }
-        }
-
-        // if still remaining words -> ellipsis on line2
-        if (i < words.size()) {
-            String base = line2.toString();
-            if (base.isEmpty()) base = line1.toString();
-            if (base.isEmpty()) base = words.get(0);
-
-            String trimmed = base;
-            while (trimmed.length() > 2 && fm.stringWidth(trimmed + "...") > maxW) {
-                trimmed = trimmed.substring(0, trimmed.length() - 1);
-            }
-            line2.setLength(0);
-            line2.append(trimmed).append("...");
-        }
-
-        return new String[]{line1.toString(), line2.toString()};
-    }
-
-    private static String cutToWidth(String text, FontMetrics fm, int maxW) {
-        if (text == null) return "";
-        text = text.trim();
-        if (fm.stringWidth(text) <= maxW) return text;
-        String s = text;
-        while (s.length() > 2 && fm.stringWidth(s + "...") > maxW) {
-            s = s.substring(0, s.length() - 1);
-        }
-        return s + "...";
     }
 
     private static class AnswerCard extends JButton {
@@ -551,43 +566,48 @@ public class QuestionDialog {
 
         public void markCorrect() {
             showCorrect = true;
-            showWrong = false;
+            showWrong   = false;
             repaint();
         }
 
         public void markWrong() {
-            showWrong = true;
+            showWrong   = true;
             showCorrect = false;
             repaint();
         }
 
         public void clearMarks() {
             showCorrect = false;
-            showWrong = false;
-            chosen = false;
+            showWrong   = false;
+            chosen      = false;
             repaint();
         }
 
-        @Override public Dimension getPreferredSize() {
+        @Override
+        public Dimension getPreferredSize() {
             return new Dimension(250, 92);
         }
 
-        @Override protected void paintComponent(Graphics g) {
+        @Override
+        protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             applyTextHints(g2);
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
 
             int w = getWidth();
             int h = getHeight();
             int arc = 16;
 
-            // background + border based on state
             Color bg = ANS_BG;
             Color border = ANS_BORDER;
             float strokeW = 2f;
 
-            if (down) bg = ANS_BG_DOWN;
-            else if (hover) bg = ANS_BG_HOVER;
+            if (down) {
+                bg = ANS_BG_DOWN;
+            } else if (hover) {
+                bg = ANS_BG_HOVER;
+            }
 
             if (chosen) {
                 bg = new Color(220, 242, 255, 245);
@@ -595,7 +615,6 @@ public class QuestionDialog {
                 strokeW = 3f;
             }
 
-            // result overrides (highest priority)
             if (showCorrect) {
                 bg = CORRECT_BG;
                 border = CORRECT_BORDER;
@@ -606,11 +625,9 @@ public class QuestionDialog {
                 strokeW = 3.2f;
             }
 
-            // shadow
             g2.setColor(new Color(0, 0, 0, 30));
             g2.fillRoundRect(6, 8, w - 12, h - 12, arc, arc);
 
-            // card
             g2.setColor(bg);
             g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
 
@@ -618,7 +635,6 @@ public class QuestionDialog {
             understandingStroke(g2, strokeW);
             g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
 
-            // badge
             int r = 30;
             int bx = 16;
             int by = (h - r) / 2;
@@ -651,13 +667,11 @@ public class QuestionDialog {
             int ty = by + (r - fmB.getHeight()) / 2 + fmB.getAscent();
             g2.drawString(badge, tx, ty);
 
-            // text
             g2.setColor(QUESTION_TXT);
             g2.setFont(FONT_ANS);
             FontMetrics fm = g2.getFontMetrics();
 
             String raw = (text == null) ? "" : text;
-
             int textX = bx + r + 16;
             int maxW  = w - textX - 18;
 
@@ -697,10 +711,12 @@ public class QuestionDialog {
             repaint();
         }
 
-        @Override protected void paintComponent(Graphics g) {
+        @Override
+        protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             applyTextHints(g2);
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
 
             int w = getWidth();
             int pad = 30;
@@ -717,17 +733,8 @@ public class QuestionDialog {
             g2.dispose();
         }
     }
-    
-    private static String levelLabel(model.QuestionLevel lvl) {
-        if (lvl == null) return "LEVEL";
-        return switch (lvl) {
-            case EASY -> "EASY";
-            case MEDIUM -> "MEDIUM";
-            case HARD -> "HARD";
-            case EXPERT -> "EXPERT";
-        };
-    }
-    
+
+    // LevelChip ללא QuestionLevel – רק טקסט
     private static class LevelChip extends JComponent {
         private final String text;
 
@@ -739,10 +746,12 @@ public class QuestionDialog {
             setToolTipText("Question level");
         }
 
-        @Override protected void paintComponent(Graphics g) {
+        @Override
+        protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             applyTextHints(g2);
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
 
             int w = getWidth();
             int h = getHeight();

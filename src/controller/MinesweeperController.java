@@ -278,7 +278,7 @@ public class MinesweeperController {
         }
 
         // נועל את הלוחות בזמן האנימציה
-        view.setBoardsEnabled(false);
+        ((MinesweeperGUI) view).setBoardsEnabled(false);
 
         final int[] index = {0};
         int delayMs = 60; // כמה מילישניות בין תא לתא – אפשר לשחק עם זה
