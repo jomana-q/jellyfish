@@ -36,7 +36,8 @@ public class Board {
     private void initEmptyCells() {
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
-                grid[r][c] = new Cell(CellType.EMPTY);
+//                grid[r][c] = new Cell(CellType.EMPTY);
+                grid[r][c] = CellFactory.createCell(CellType.EMPTY);
             }
         }
     }
