@@ -147,7 +147,7 @@ public class MinesweeperController {
                 if (bonus == QuestionBonusEffect.REVEAL_MINE) {
                     board.revealRandomMine();
                 } else if (bonus == QuestionBonusEffect.REVEAL_3X3) {
-                    board.revealRandom3x3(session);
+                	board.revealBest3x3(session);
                 }
 
                 board.markSpecialUsed(row, col);
@@ -200,8 +200,12 @@ public class MinesweeperController {
         Board board = firstBoard ? board1 : board2;
         Cell cell = board.getCell(row, col);
 
+        // אם כבר נחשף (ולא דגל) אין מה לעשות
+        // (ביטול דגל נטפל דרך toggleFlag עצמו)
         if (cell.isRevealed()) return;
         if (cell.isPowerUsed()) return;
+
+        boolean wasFlagged = cell.isFlagged();
 
         int minesBefore = countRevealedMines(board1) + countRevealedMines(board2);
         int livesBefore = session.getLives();
@@ -215,14 +219,28 @@ public class MinesweeperController {
 
         showMineToastIfChanged(minesBefore, minesAfter, livesBefore, livesAfter, scoreBefore, scoreAfter);
 
-        // אם לא נחשף מוקש, עדיין אפשר הודעה על דגל (אופציונלי)
-        if (minesAfter == minesBefore) {
+        boolean revealedMineNow = (minesAfter > minesBefore);
+        boolean isUnflag = wasFlagged && !cell.isFlagged() && !cell.isRevealed();
+
+        // Toast אופציונלי לדגל רגיל
+        if (!isUnflag && !revealedMineNow) {
             int d = scoreAfter - scoreBefore;
             if (d < 0) view.showToast("Wrong flag ❌ (" + d + " score)", 1600);
             else view.showToast("Flag placed 🚩", 1200);
+        } else if (isUnflag) {
+            view.showToast("Flag removed 🚫  Keep going!", 1200);
         }
 
         view.refreshView();
+
+        // החוקים שלך:
+        // 1) ביטול דגל -> לא מתחלף תור
+        if (isUnflag) return;
+
+        // 2) דגל על מוקש שחשף מוקש -> לא מתחלף תור
+        if (revealedMineNow) return;
+
+        // 3) דגל על לא-מוקש (חדש) -> כן מתחלף תור
         endTurn();
     }
 
@@ -314,7 +332,7 @@ public class MinesweeperController {
         if (dLives < 0) {
             view.showToast("Oops! You hit a mine 💥  (-1 life)", 1700);
         } else if (dScore > 0) {
-            view.showToast("Nice! Mine flagged 💎  (+" + dScore + " score)", 1700);
+        	view.showToast("Nice! Mine flagged 💎 (+" + dScore + " score) Keep going!", 1800);
         } else {
             view.showToast("Mine revealed 💥", 1400);
         }

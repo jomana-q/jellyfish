@@ -351,7 +351,28 @@ public class MinesweeperGUI extends JPanel {
 	public void showToast(String msg, int millis) {
 	    if (toastPanel == null || toastLabel == null) return;
 
-	    toastLabel.setText((msg == null) ? "" : msg);
+	    String text = (msg == null) ? "" : msg;
+	    toastLabel.setText(text);
+
+	    // --- auto width based on text ---
+	    FontMetrics fm = toastLabel.getFontMetrics(toastLabel.getFont());
+	    int textW = fm.stringWidth(text);
+
+	    int minW = 240;
+	    int maxW = 520;         
+	    int padding = 28;       
+	    
+	    int w = Math.min(maxW, Math.max(minW, textW + padding));
+
+	    // height 
+	    int h = 44;
+
+	    toastPanel.setPreferredSize(new Dimension(w, h));
+	    toastPanel.setSize(new Dimension(w, h));  
+	    toastPanel.revalidate();
+
+	    if (layeredPane != null) layeredPane.doLayout();
+
 	    toastPanel.setVisible(true);
 	    toastPanel.repaint();
 
@@ -359,7 +380,7 @@ public class MinesweeperGUI extends JPanel {
 	    toastTimer = new Timer(Math.max(300, millis), e -> {
 	        toastPanel.setVisible(false);
 	        toastPanel.repaint();
-	        ((Timer)e.getSource()).stop();
+	        ((Timer) e.getSource()).stop();
 	    });
 	    toastTimer.setRepeats(false);
 	    toastTimer.start();
