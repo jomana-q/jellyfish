@@ -4,6 +4,10 @@ import model.*;
 import view.MinesweeperGUI;
 import view.QuestionDialog;
 
+import javax.swing.Timer;
+import java.awt.Point;
+import java.util.List;
+
 public class MinesweeperController {
 
     private final Board board1;
@@ -42,19 +46,26 @@ public class MinesweeperController {
         paused = false;
         pausedAtMillis = 0L;
         totalPausedMillis = 0L;
+
+        // להתחיל מוזיקת משחק
+        SoundManager.getInstance().playGameLoop();
     }
 
     public void togglePause() {
         if (gameStartMillis == 0L) return;
 
         long now = System.currentTimeMillis();
+        SoundManager sm = SoundManager.getInstance();
+
         if (!paused) {
             paused = true;
             pausedAtMillis = now;
+            sm.stopBgm();
         } else {
             paused = false;
             totalPausedMillis += (now - pausedAtMillis);
             pausedAtMillis = 0L;
+            sm.playGameLoop();
         }
     }
 
@@ -81,15 +92,15 @@ public class MinesweeperController {
         // activate question/surprise
         if (board.canActivateSpecial(row, col)) {
 
-        	if (!session.canPayForPower()) {
-        	    boolean isQuestionTile = (cell.getType() == CellType.QUESTION);
-        	    int cost = session.getDifficulty().getPowerCost();
-        	    int current = session.getScore();
+            if (!session.canPayForPower()) {
+                boolean isQuestionTile = (cell.getType() == CellType.QUESTION);
+                int cost = session.getDifficulty().getPowerCost();
+                int current = session.getScore();
 
-        	    view.showNotEnoughPointsOverlay(isQuestionTile, cost, current);
-        	    view.refreshView();
-        	    return;
-        	}
+                view.showNotEnoughPointsOverlay(isQuestionTile, cost, current);
+                view.refreshView();
+                return;
+            }
 
             // Question bank empty?
             if (cell.getType() == CellType.QUESTION) {
@@ -116,7 +127,7 @@ public class MinesweeperController {
             int payDeltaScore = scoreAfterPay - scoreBeforePay;
             int payDeltaLives = livesAfterPay - livesBeforePay; // usually 0
 
-         // SURPRISE
+            // ===== SURPRISE =====
             if (cell.getType() == CellType.SURPRISE) {
                 boolean good = Math.random() < 0.5;
 
@@ -126,28 +137,46 @@ public class MinesweeperController {
                 int outcomeDeltaScore = session.getScore() - scoreAfterPay;
                 int outcomeDeltaLives = session.getLives() - livesAfterPay;
 
+                SoundManager sm = SoundManager.getInstance();
+                int SOUND_DELAY_MS = 350;
+                Timer soundTimer = new Timer(SOUND_DELAY_MS, e -> {
+                    if (good) sm.playGoodSurpriseThenResumeGame();
+                    else sm.playBadSurpriseThenResumeGame();
+                    ((Timer) e.getSource()).stop();
+                });
+                soundTimer.setRepeats(false);
+                soundTimer.start();
+
                 view.playGiftCenterAndShowOverlay(
                         good ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
                         good ? "GOOD SURPRISE!" : "BAD SURPRISE!",
                         formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, null),
                         OVERLAY_SECONDS,
-                        this::endTurn   
+                        this::endTurn
                 );
 
                 return;
             }
 
-            // QUESTION
+            // ===== QUESTION =====
             if (cell.getType() == CellType.QUESTION) {
+
+                SoundManager sm = SoundManager.getInstance();
+
+                sm.playQuestionLoop();
+
                 Question q = QuestionBank.getInstance().getRandomQuestion();
                 boolean correct = QuestionDialog.showQuestionDialog(view, q);
+
+                if (correct) sm.playCorrectFor5SecondsThenResumeGame();
+                else sm.playWrongThenResumeGame();
 
                 QuestionBonusEffect bonus = session.applyQuestionResult(q.getLevel(), correct);
 
                 if (bonus == QuestionBonusEffect.REVEAL_MINE) {
                     board.revealRandomMine();
                 } else if (bonus == QuestionBonusEffect.REVEAL_3X3) {
-                	board.revealBest3x3(session);
+                    board.revealBest3x3(session);
                 }
 
                 board.markSpecialUsed(row, col);
@@ -157,11 +186,11 @@ public class MinesweeperController {
 
                 view.refreshView();
                 view.showQuestionResultOverlay(
-                	    correct ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
-                	    correct ? "CORRECT ANSWER!" : "WRONG ANSWER!",
-                	    formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, bonus),
-                	    OVERLAY_SECONDS
-                	);
+                        correct ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
+                        correct ? "CORRECT ANSWER!" : "WRONG ANSWER!",
+                        formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, bonus),
+                        OVERLAY_SECONDS
+                );
                 endTurn();
                 return;
             }
@@ -178,20 +207,59 @@ public class MinesweeperController {
             return;
         }
 
-     // normal open
+        // ===== פתיחה רגילה – עכשיו עם אופציה לאנימציית קסקייד =====
+        startCascadeOpen(board, row, col);
+    }
+
+    /**
+     * פתיחת תא עם אנימציית קסקייד:
+     * - אם אין קסקייד אמיתי (תא אחד בלבד) → openCell רגיל.
+     * - אם יש קסקייד – פתיחה תא-תא עם Timer מהיר.
+     */
+    private void startCascadeOpen(Board board, int row, int col) {
+
         int minesBefore = countRevealedMines(board1) + countRevealedMines(board2);
         int livesBefore = session.getLives();
         int scoreBefore = session.getScore();
 
-        board.openCell(row, col, session);
+        List<Point> cascade = board.computeCascadeOrder(row, col);
 
-        int minesAfter = countRevealedMines(board1) + countRevealedMines(board2);
-        int livesAfter = session.getLives();
-        int scoreAfter = session.getScore();
+        if (cascade == null || cascade.size() <= 1) {
+            board.openCell(row, col, session);
 
-        showMineToastIfChanged(minesBefore, minesAfter, livesBefore, livesAfter, scoreBefore, scoreAfter);
+            int minesAfter = countRevealedMines(board1) + countRevealedMines(board2);
+            int livesAfter = session.getLives();
+            int scoreAfter = session.getScore();
 
-        endTurn();
+            showMineToastIfChanged(minesBefore, minesAfter, livesBefore, livesAfter, scoreBefore, scoreAfter);
+            endTurn();
+            return;
+        }
+
+        final int[] index = {0};
+        int delayMs = 40; // אנימציה מהירה
+
+        Timer t = new Timer(delayMs, e -> {
+
+            if (index[0] >= cascade.size()) {
+                ((Timer) e.getSource()).stop();
+
+                int minesAfter = countRevealedMines(board1) + countRevealedMines(board2);
+                int livesAfter = session.getLives();
+                int scoreAfter = session.getScore();
+
+                showMineToastIfChanged(minesBefore, minesAfter, livesBefore, livesAfter, scoreBefore, scoreAfter);
+                endTurn();
+                return;
+            }
+
+            Point p = cascade.get(index[0]++);
+            board.revealSingleCell(p.x, p.y, session);
+            view.refreshView();
+        });
+
+        t.setRepeats(true);
+        t.start();
     }
 
     public void handleRightClick(boolean firstBoard, int row, int col) {
@@ -200,8 +268,6 @@ public class MinesweeperController {
         Board board = firstBoard ? board1 : board2;
         Cell cell = board.getCell(row, col);
 
-        // אם כבר נחשף (ולא דגל) אין מה לעשות
-        // (ביטול דגל נטפל דרך toggleFlag עצמו)
         if (cell.isRevealed()) return;
         if (cell.isPowerUsed()) return;
 
@@ -222,7 +288,6 @@ public class MinesweeperController {
         boolean revealedMineNow = (minesAfter > minesBefore);
         boolean isUnflag = wasFlagged && !cell.isFlagged() && !cell.isRevealed();
 
-        // Toast אופציונלי לדגל רגיל
         if (!isUnflag && !revealedMineNow) {
             int d = scoreAfter - scoreBefore;
             if (d < 0) view.showToast("Wrong flag ❌ (" + d + " score)", 1600);
@@ -233,14 +298,9 @@ public class MinesweeperController {
 
         view.refreshView();
 
-        // החוקים שלך:
-        // 1) ביטול דגל -> לא מתחלף תור
         if (isUnflag) return;
-
-        // 2) דגל על מוקש שחשף מוקש -> לא מתחלף תור
         if (revealedMineNow) return;
 
-        // 3) דגל על לא-מוקש (חדש) -> כן מתחלף תור
         endTurn();
     }
 
@@ -248,10 +308,12 @@ public class MinesweeperController {
         view.refreshView();
 
         if (board1.allMinesRevealed() || board2.allMinesRevealed()) {
+            SoundManager.getInstance().stopBgm();
             view.showGameOver(true);
             return;
         }
         if (session.isOutOfLives()) {
+            SoundManager.getInstance().stopBgm();
             view.showGameOver(false);
             return;
         }
@@ -267,18 +329,15 @@ public class MinesweeperController {
 
         StringBuilder sb = new StringBuilder();
 
-        // Activation (cost)
         if (payDeltaScore != 0 || payDeltaLives != 0) {
             sb.append("Activation: ")
               .append(formatDelta(payDeltaScore, payDeltaLives));
         }
 
-        // Outcome
         if (sb.length() > 0) sb.append("  |  ");
         sb.append("Outcome: ")
           .append(formatDelta(outcomeDeltaScore, outcomeDeltaLives));
 
-        // Bonus (optional)
         if (bonus != null && bonus != QuestionBonusEffect.NONE) {
             sb.append("  |  Bonus: ").append(shortBonusName(bonus));
         }
@@ -309,7 +368,7 @@ public class MinesweeperController {
             default -> b.name();
         };
     }
-    
+
     private int countRevealedMines(Board b) {
         int count = 0;
         for (int r = 0; r < b.getRows(); r++) {
@@ -328,11 +387,10 @@ public class MinesweeperController {
 
         if (dMines <= 0) return; // no new mine revealed
 
-        // Mine got revealed somehow (left click or correct flag)
         if (dLives < 0) {
             view.showToast("Oops! You hit a mine 💥  (-1 life)", 1700);
         } else if (dScore > 0) {
-        	view.showToast("Nice! Mine flagged 💎 (+" + dScore + " score) Keep going!", 1800);
+            view.showToast("Nice! Mine flagged 💎 (+" + dScore + " score) Keep going!", 1800);
         } else {
             view.showToast("Mine revealed 💥", 1400);
         }
