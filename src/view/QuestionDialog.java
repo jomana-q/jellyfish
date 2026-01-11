@@ -254,7 +254,9 @@ public class QuestionDialog {
                 }
             }
 
-            result[0] = (chosenIdx != -1) && q.isCorrect(chosenIdx);
+//            result[0] = (chosenIdx != -1) && q.isCorrect(chosenIdx);
+
+            result[0] = (chosenIdx != -1);
 
             // keep dialog open briefly so colors are visible
             Timer closeLater = new Timer(900, ev -> dialog.dispose());

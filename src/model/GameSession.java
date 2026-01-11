@@ -1,5 +1,8 @@
 package model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class GameSession {
 
     private final Difficulty difficulty;
@@ -7,6 +10,18 @@ public class GameSession {
     private int score;        // pts – משותף לשני השחקנים
     private int lives;        // hearts – משותף
     private final int maxLives;
+
+    private List<GameObserver> observers = new ArrayList<>();
+
+    public void addObserver(GameObserver o) {
+        observers.add(o);
+    }
+
+    private void notifyObservers() {
+        for (GameObserver o : observers) {
+            o.onGameStateChanged(this);
+        }
+    }
 
     public GameSession(Difficulty difficulty) {
         this.difficulty = difficulty;
