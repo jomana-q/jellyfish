@@ -226,14 +226,14 @@ public class Board {
     public void toggleFlag(int row, int col, GameSession session) {
         Cell cell = getCell(row, col);
 
-        // אי אפשר לסמן תא שכבר נחשף
-        if (cell.isRevealed()) {
+        // קודם כל: אם יש דגל -> מבטלים (גם אם revealed)
+        if (cell.isFlagged()) {
+            cell.setFlagged(false);
             return;
         }
 
-        if (cell.isFlagged()) {
-            // ביטול דגל – לא משנים ניקוד
-            cell.setFlagged(false);
+        // עכשיו: אם כבר נחשף ואין דגל - לא עושים כלום
+        if (cell.isRevealed()) {
             return;
         }
 
@@ -243,8 +243,7 @@ public class Board {
         switch (cell.getType()) {
             case MINE:
                 session.updateScore(+1);
-                // האפיון אומר "וחושפת המוקש" – אז נסמן גם חשיפה
-                cell.setRevealed(true);
+                cell.setRevealed(true); // חושף מוקש
                 break;
 
             case NUMBER:
@@ -381,26 +380,61 @@ public class Board {
     }
 
     
-    public void revealRandom3x3(GameSession session) {
-        int r = random.nextInt(rows);
-        int c = random.nextInt(cols);
+    public void revealBest3x3(GameSession session) {
 
+        // אם הלוח קטן מ-3x3 אין מה לעשות
+        if (rows < 3 || cols < 3) return;
+
+        int bestR = -1, bestC = -1;
+        int bestScore = -1;
+
+        // מרכזים חוקיים בלבד (לא בקצוות) כדי שתמיד יהיה 3x3 מלא
+        for (int r = 1; r <= rows - 2; r++) {
+            for (int c = 1; c <= cols - 2; c++) {
+
+                int score = 0;
+
+                // סופרים כמה מתוך ה-9 עדיין לא פתוחים ולא בדגל
+                for (int dr = -1; dr <= 1; dr++) {
+                    for (int dc = -1; dc <= 1; dc++) {
+                        Cell cell = grid[r + dr][c + dc];
+                        if (!cell.isRevealed() && !cell.isFlagged()) {
+                            score++;
+                        }
+                    }
+                }
+
+                // בוחרים את החלון הכי טוב
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestR = r;
+                    bestC = c;
+                } else if (score == bestScore && score > 0) {
+                    // שבירת תיקו רנדומלית קטנה כדי שלא תמיד יבחר אותו איזור
+                    if (random.nextBoolean()) {
+                        bestR = r;
+                        bestC = c;
+                    }
+                }
+            }
+        }
+
+        // אין אף 3x3 שיש בו משהו חדש לפתוח
+        if (bestScore <= 0) return;
+
+        // פותחים בדיוק את ה-3x3 שנבחר: בלי ניקוד ובלי קסקדה ובלי ירידת חיים
         for (int dr = -1; dr <= 1; dr++) {
             for (int dc = -1; dc <= 1; dc++) {
-                int nr = r + dr;
-                int nc = c + dc;
-
-                if (!isInBounds(nr, nc)) continue;
+                int nr = bestR + dr;
+                int nc = bestC + dc;
 
                 Cell cell = grid[nr][nc];
                 if (!cell.isRevealed() && !cell.isFlagged()) {
-                    // אפקט אוטומטי: בלי נקודות ובלי קסקדה => נשאר בדיוק 3x3
-                	revealRecursive(nr, nc, session, false, false, false);
+                    revealRecursive(nr, nc, session, false, false, false);
                 }
             }
         }
     }
-
     
     /**
      * בדיקה אם כל המוקשים על הלוח כבר נחשפו.
