@@ -40,14 +40,14 @@ public class MinesweeperController {
     public GameSession getSession() { return session; }
     public boolean isPlayer1Turn() { return player1Turn; }
 
-    // ===== Timer API =====
+    // Timer API
     public void startGameTimer() {
         gameStartMillis = System.currentTimeMillis();
         paused = false;
         pausedAtMillis = 0L;
         totalPausedMillis = 0L;
 
-        // ✅ מתחילים מוזיקת משחק
+        // להתחיל מוזיקת משחק
         SoundManager.getInstance().playGameLoop();
     }
 
@@ -60,15 +60,11 @@ public class MinesweeperController {
         if (!paused) {
             paused = true;
             pausedAtMillis = now;
-
-            // ✅ עוצרים מוזיקת רקע בזמן pause
             sm.stopBgm();
         } else {
             paused = false;
             totalPausedMillis += (now - pausedAtMillis);
             pausedAtMillis = 0L;
-
-            // ✅ מחזירים מוזיקת משחק
             sm.playGameLoop();
         }
     }
@@ -84,7 +80,7 @@ public class MinesweeperController {
         return Math.max(0L, elapsed);
     }
 
-    // ===== Click handling =====
+    // Click handling
     public void handleLeftClick(boolean firstBoard, int row, int col) {
         if (paused) return;
 
@@ -141,10 +137,8 @@ public class MinesweeperController {
                 int outcomeDeltaScore = session.getScore() - scoreAfterPay;
                 int outcomeDeltaLives = session.getLives() - livesAfterPay;
 
-                // ✅ ננגן את הסאונד *אחרי* שהמתנה נפתחת (בערך אחרי 350ms)
                 SoundManager sm = SoundManager.getInstance();
-                int SOUND_DELAY_MS = 350; // אותו זמן כמו ה-Timer הראשון בגיפט
-
+                int SOUND_DELAY_MS = 350;
                 Timer soundTimer = new Timer(SOUND_DELAY_MS, e -> {
                     if (good) sm.playGoodSurpriseThenResumeGame();
                     else sm.playBadSurpriseThenResumeGame();
@@ -153,7 +147,6 @@ public class MinesweeperController {
                 soundTimer.setRepeats(false);
                 soundTimer.start();
 
-                // ✅ האנימציה + האוברליי, ורק בסוף – endTurn (ואז הקו הזהב של השחקן הבא)
                 view.playGiftCenterAndShowOverlay(
                         good ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
                         good ? "GOOD SURPRISE!" : "BAD SURPRISE!",
@@ -161,8 +154,8 @@ public class MinesweeperController {
                         OVERLAY_SECONDS,
                         this::endTurn
                 );
-                return;
 
+                return;
             }
 
             // ===== QUESTION =====
@@ -170,25 +163,20 @@ public class MinesweeperController {
 
                 SoundManager sm = SoundManager.getInstance();
 
-                // ✅ מתחילים מוזיקת שאלה בלופ
                 sm.playQuestionLoop();
 
                 Question q = QuestionBank.getInstance().getRandomQuestion();
-
-                // בזמן הדיאלוג מוזיקת השאלה רצה
                 boolean correct = QuestionDialog.showQuestionDialog(view, q);
 
-                // ✅ כשהדיאלוג נסגר: מפסיקים BGM שאלה ומנגנים תוצאה ואז חזרה למשחק
                 if (correct) sm.playCorrectFor5SecondsThenResumeGame();
                 else sm.playWrongThenResumeGame();
 
                 QuestionBonusEffect bonus = session.applyQuestionResult(q.getLevel(), correct);
 
-                // בונוסים (REVEAL_MINE / REVEAL_3X3) נשארים כמו אצלך
                 if (bonus == QuestionBonusEffect.REVEAL_MINE) {
                     board.revealRandomMine();
                 } else if (bonus == QuestionBonusEffect.REVEAL_3X3) {
-                    board.revealRandom3x3(session);
+                    board.revealBest3x3(session);
                 }
 
                 board.markSpecialUsed(row, col);
@@ -197,17 +185,14 @@ public class MinesweeperController {
                 int outcomeDeltaLives = session.getLives() - livesAfterPay;
 
                 view.refreshView();
-
-                // ✅ עכשיו: קודם מציגים את התוצאה, ורק אחרי X שניות עושים endTurn
-                view.showQuestionResultOverlayAndThen(
+                view.showQuestionResultOverlay(
                         correct ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
                         correct ? "CORRECT ANSWER!" : "WRONG ANSWER!",
                         formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, bonus),
-                        OVERLAY_SECONDS,
-                        this::endTurn   // יעבור לשחקן הבא *רק אחרי* שהמסך נסגר
+                        OVERLAY_SECONDS
                 );
+                endTurn();
                 return;
-
             }
 
             // fallback
@@ -222,8 +207,59 @@ public class MinesweeperController {
             return;
         }
 
-        // ===== פתיחה רגילה – עם קסקייד מונפש =====
+        // ===== פתיחה רגילה – עכשיו עם אופציה לאנימציית קסקייד =====
         startCascadeOpen(board, row, col);
+    }
+
+    /**
+     * פתיחת תא עם אנימציית קסקייד:
+     * - אם אין קסקייד אמיתי (תא אחד בלבד) → openCell רגיל.
+     * - אם יש קסקייד – פתיחה תא-תא עם Timer מהיר.
+     */
+    private void startCascadeOpen(Board board, int row, int col) {
+
+        int minesBefore = countRevealedMines(board1) + countRevealedMines(board2);
+        int livesBefore = session.getLives();
+        int scoreBefore = session.getScore();
+
+        List<Point> cascade = board.computeCascadeOrder(row, col);
+
+        if (cascade == null || cascade.size() <= 1) {
+            board.openCell(row, col, session);
+
+            int minesAfter = countRevealedMines(board1) + countRevealedMines(board2);
+            int livesAfter = session.getLives();
+            int scoreAfter = session.getScore();
+
+            showMineToastIfChanged(minesBefore, minesAfter, livesBefore, livesAfter, scoreBefore, scoreAfter);
+            endTurn();
+            return;
+        }
+
+        final int[] index = {0};
+        int delayMs = 40; // אנימציה מהירה
+
+        Timer t = new Timer(delayMs, e -> {
+
+            if (index[0] >= cascade.size()) {
+                ((Timer) e.getSource()).stop();
+
+                int minesAfter = countRevealedMines(board1) + countRevealedMines(board2);
+                int livesAfter = session.getLives();
+                int scoreAfter = session.getScore();
+
+                showMineToastIfChanged(minesBefore, minesAfter, livesBefore, livesAfter, scoreBefore, scoreAfter);
+                endTurn();
+                return;
+            }
+
+            Point p = cascade.get(index[0]++);
+            board.revealSingleCell(p.x, p.y, session);
+            view.refreshView();
+        });
+
+        t.setRepeats(true);
+        t.start();
     }
 
     public void handleRightClick(boolean firstBoard, int row, int col) {
@@ -234,6 +270,8 @@ public class MinesweeperController {
 
         if (cell.isRevealed()) return;
         if (cell.isPowerUsed()) return;
+
+        boolean wasFlagged = cell.isFlagged();
 
         int minesBefore = countRevealedMines(board1) + countRevealedMines(board2);
         int livesBefore = session.getLives();
@@ -247,74 +285,23 @@ public class MinesweeperController {
 
         showMineToastIfChanged(minesBefore, minesAfter, livesBefore, livesAfter, scoreBefore, scoreAfter);
 
-        // אם לא נחשף מוקש, עדיין אפשר הודעה על דגל (אופציונלי)
-        if (minesAfter == minesBefore) {
+        boolean revealedMineNow = (minesAfter > minesBefore);
+        boolean isUnflag = wasFlagged && !cell.isFlagged() && !cell.isRevealed();
+
+        if (!isUnflag && !revealedMineNow) {
             int d = scoreAfter - scoreBefore;
             if (d < 0) view.showToast("Wrong flag ❌ (" + d + " score)", 1600);
             else view.showToast("Flag placed 🚩", 1200);
+        } else if (isUnflag) {
+            view.showToast("Flag removed 🚫  Keep going!", 1200);
         }
 
         view.refreshView();
+
+        if (isUnflag) return;
+        if (revealedMineNow) return;
+
         endTurn();
-    }
-
-    /**
-     * פתיחת תא (כולל קסקייד) עם אנימציה:
-     * – אם זה רק תא אחד → מתנהג כמו openCell רגיל.
-     * – אם יש קסקייד אמיתי (הרבה תאים) → פותח תא-תא בטיימר.
-     */
-   private void startCascadeOpen(Board board, int row, int col) {
- 
-
-        // קודם מחשבים מה היה קורה בקסקייד רגיל
-        List<Point> cascade = board.computeCascadeOrder(row, col);
-
-        // אין קסקייד? (או רק תא אחד) – מתנהג כמו קודם
-        if (cascade == null || cascade.size() <= 1) {
-            board.openCell(row, col, session);
-            view.refreshView();
-            endTurn();
-            return;
-        }
-
-        // נועל את הלוחות בזמן האנימציה
-        view.setBoardsEnabled(false);
-
-        final int[] index = {0};
-        int delayMs = 60; // כמה מילישניות בין תא לתא – אפשר לשחק עם זה
-
-        Timer t = new Timer(delayMs, e -> {
-
-            // סיימנו את כל התאים
-            if (index[0] >= cascade.size()) {
-                ((Timer) e.getSource()).stop();
-
-                view.refreshView();
-                view.setBoardsEnabled(true);
-                endTurn();   // פה יקרה גם קו זהב לשחקן הבא
-                return;
-            }
-
-            Point p = cascade.get(index[0]++);
-
-            // פותחים תא בודד – עם ניקוד/חיים
-            board.revealSingleCell(p.x, p.y, session);
-
-            view.refreshView();
-
-            // אם במהלך הקסקייד נגמרו חיים או נגמר המשחק – לעצור מיד:
-            if (session.isOutOfLives()
-                    || board1.allMinesRevealed()
-                    || board2.allMinesRevealed()) {
-
-                ((Timer) e.getSource()).stop();
-                view.setBoardsEnabled(true);
-                endTurn(); // endTurn כבר יזהה GAME OVER ויפתח דיאלוג
-            }
-        });
-
-        t.setRepeats(true);
-        t.start();
     }
 
     private void endTurn() {
@@ -381,7 +368,7 @@ public class MinesweeperController {
             default -> b.name();
         };
     }
-    
+
     private int countRevealedMines(Board b) {
         int count = 0;
         for (int r = 0; r < b.getRows(); r++) {
@@ -400,11 +387,10 @@ public class MinesweeperController {
 
         if (dMines <= 0) return; // no new mine revealed
 
-        // Mine got revealed somehow (left click or correct flag)
         if (dLives < 0) {
             view.showToast("Oops! You hit a mine 💥  (-1 life)", 1700);
         } else if (dScore > 0) {
-            view.showToast("Nice! Mine flagged 💎  (+" + dScore + " score)", 1700);
+            view.showToast("Nice! Mine flagged 💎 (+" + dScore + " score) Keep going!", 1800);
         } else {
             view.showToast("Mine revealed 💥", 1400);
         }

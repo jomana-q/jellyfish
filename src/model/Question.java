@@ -1,6 +1,6 @@
 package model;
 
-public class Question {
+public abstract class Question {
 
     private String questionText;      // תוכן השאלה
     private String[] answers;         // 4 תשובות אפשריות
@@ -27,6 +27,7 @@ public class Question {
         return answers;
     }
 
+    /** מאפשר ל־UI לדעת איזו תשובה נכונה */
     public int getCorrectAnswerIndex() {
         return correctAnswerIndex;
     }
@@ -41,4 +42,12 @@ public class Question {
     public boolean isCorrect(int index) {
         return index == correctAnswerIndex;
     }
+
+    public final boolean processAnswer(int chosenIndex, GameSession session) {
+        boolean correct = isCorrect(chosenIndex);
+        applyEffect(correct, session);
+        return correct;
+    }
+
+    protected abstract void applyEffect(boolean correct, GameSession session);
 }

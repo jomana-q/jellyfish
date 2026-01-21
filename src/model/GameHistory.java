@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class GameHistory {
+public class GameHistory implements GameObserver {
 
     private List<GameHistoryEntry> entries;
     private static final String HISTORY_FILE = "history.csv";
@@ -13,6 +13,12 @@ public class GameHistory {
     public GameHistory() {
         this.entries = new ArrayList<>();
         loadHistory();
+    }
+
+    @Override
+    public void onGameStateChanged(GameSession session) {
+
+
     }
 
     // חדש: כולל durationSeconds

@@ -107,7 +107,12 @@ public class QuestionBank {
                     }
 
                     String[] answers = { a, b, c, d };
-                    questions.add(new Question(qText, answers, correctIdx, level));
+                    questions.add(new Question(qText, answers, correctIdx, level) {
+                        @Override
+                        protected void applyEffect(boolean correct, GameSession session) {
+
+                        }
+                    });
 
                 } catch (NumberFormatException nfe) {
                     System.err.println("Systems: error parsing row " + rowNum + " (difficulty not a number). Skipping.");

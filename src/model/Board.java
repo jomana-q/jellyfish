@@ -1,6 +1,6 @@
 package model;
 
-import java.awt.Point;
+import java.awt.Point;  // *** חדש: בשביל רשימת נקודות לקסקייד ***
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +37,8 @@ public class Board {
     private void initEmptyCells() {
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
-                grid[r][c] = new Cell(CellType.EMPTY);
+//                grid[r][c] = new Cell(CellType.EMPTY);
+                grid[r][c] = CellFactory.createCell(CellType.EMPTY);
             }
         }
     }
@@ -180,7 +181,6 @@ public class Board {
             return;
         }
 
-
         // כל תא שאינו מוקש → נקודה אחת רק אם זו חשיפה "רגילה"
         if (awardPoints) {
             session.updateScore(+1);
@@ -217,11 +217,14 @@ public class Board {
         }
     }
 
-    // ---------- לוגיקת קסקייד מונפש ----------
+    // ---------- לוגיקת קסקייד לאנימציה (עזר ל-GUI) ----------
 
     /**
-     * מחשב את סדר התאים שהיו נפתחים ע"י revealRecursive,
-     * אבל בלי באמת לשנות את ה-grid (רק מחזיר רשימת נקודות).
+     * מחזירה רשימת נקודות (Point) של כל התאים
+     * שהיו נפתחים ע"י revealRecursive מאותו תא,
+     * אבל **בלי לשנות** את הגריד בפועל.
+     *
+     * ה-GUI יכול להשתמש ברשימה הזאת כדי לפתוח תאים אחד-אחד באנימציה.
      */
     public List<Point> computeCascadeOrder(int row, int col) {
         List<Point> result = new ArrayList<>();
@@ -289,8 +292,11 @@ public class Board {
     }
 
     /**
-     * פתיחה של תא אחד בלבד (בלי קסקייד),
-     * עם אותה לוגיקת ניקוד/חיים של revealRecursive.
+     * פתיחה של תא אחד בלבד (לשימוש באנימציה),
+     * עם אותה לוגיקה בסיסית של revealRecursive:
+     * - אם זה מוקש → life-1
+     * - אם זה לא מוקש → +1 נקודה
+     * - בלי קסקייד לשכנים (זה נעשה ע"י לולאה ב-Controller).
      */
     public void revealSingleCell(int row, int col, GameSession session) {
         if (!isInBounds(row, col)) return;
@@ -308,9 +314,10 @@ public class Board {
             return;
         }
 
-        // כל תא שאינו מוקש: +1 נקודה (כמו ב-revealRecursive)
+        // כמו ב-revealRecursive כש-awardPoints=true
         session.updateScore(+1);
     }
+
 
     /**
      * סימון / ביטול סימון בדגל.
@@ -321,14 +328,14 @@ public class Board {
     public void toggleFlag(int row, int col, GameSession session) {
         Cell cell = getCell(row, col);
 
-        // אי אפשר לסמן תא שכבר נחשף
-        if (cell.isRevealed()) {
+        // קודם כל: אם יש דגל -> מבטלים (גם אם revealed)
+        if (cell.isFlagged()) {
+            cell.setFlagged(false);
             return;
         }
 
-        if (cell.isFlagged()) {
-            // ביטול דגל – לא משנים ניקוד
-            cell.setFlagged(false);
+        // עכשיו: אם כבר נחשף ואין דגל - לא עושים כלום
+        if (cell.isRevealed()) {
             return;
         }
 
@@ -338,8 +345,7 @@ public class Board {
         switch (cell.getType()) {
             case MINE:
                 session.updateScore(+1);
-                // האפיון אומר "וחושפת המוקש" – אז נסמן גם חשיפה
-                cell.setRevealed(true);
+                cell.setRevealed(true); // חושף מוקש
                 break;
 
             case NUMBER:
@@ -350,6 +356,7 @@ public class Board {
                 break;
         }
     }
+
     /**
      * בדיקה אם ניתן להפעיל משבצת שאלה/הפתעה:
      *  - התא נחשף
@@ -369,7 +376,6 @@ public class Board {
         Cell cell = getCell(row, col);
         cell.setPowerUsed(true);
     }
-
 
     // פונקציה אופציונלית – חישוב ניקוד לדגל (אם תרצי להשתמש בה במקום toggleFlag)
     public FlagResult flagCell(int row, int col) {
@@ -475,26 +481,58 @@ public class Board {
         return true;
     }
 
-    public void revealRandom3x3(GameSession session) {
-        int r = random.nextInt(rows);
-        int c = random.nextInt(cols);
+    public void revealBest3x3(GameSession session) {
 
-        for (int dr = -1; dr <= 1; dr++) {
-            for (int dc = -1; dc <= 1; dc++) {
-                int nr = r + dr;
-                int nc = c + dc;
+        // אם הלוח קטן מ-3x3 אין מה לעשות
+        if (rows < 3 || cols < 3) return;
 
-                if (!isInBounds(nr, nc)) continue;
+        int bestR = -1, bestC = -1;
+        int bestScore = -1;
 
-                Cell cell = grid[nr][nc];
+        // מרכזים חוקיים בלבד (לא בקצוות) כדי שתמיד יהיה 3x3 מלא
+        for (int r = 1; r <= rows - 2; r++) {
+            for (int c = 1; c <= cols - 2; c++) {
 
-                // לא נוגעים בתאים שכבר נחשפו או מסומנים בדגל
-                if (cell.isRevealed() || cell.isFlagged()) {
-                    continue;
+                int score = 0;
+
+                // סופרים כמה מתוך ה-9 עדיין לא פתוחים ולא בדגל
+                for (int dr = -1; dr <= 1; dr++) {
+                    for (int dc = -1; dc <= 1; dc++) {
+                        Cell cell = grid[r + dr][c + dc];
+                        if (!cell.isRevealed() && !cell.isFlagged()) {
+                            score++;
+                        }
+                    }
                 }
 
-                // ✅ רק חושפים – בלי נקודות, בלי חיים, בלי קסקדה
-                cell.setRevealed(true);
+                // בוחרים את החלון הכי טוב
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestR = r;
+                    bestC = c;
+                } else if (score == bestScore && score > 0) {
+                    // שבירת תיקו רנדומלית קטנה כדי שלא תמיד יבחר אותו איזור
+                    if (random.nextBoolean()) {
+                        bestR = r;
+                        bestC = c;
+                    }
+                }
+            }
+        }
+
+        // אין אף 3x3 שיש בו משהו חדש לפתוח
+        if (bestScore <= 0) return;
+
+        // פותחים בדיוק את ה-3x3 שנבחר: בלי ניקוד ובלי קסקדה ובלי ירידת חיים
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                int nr = bestR + dr;
+                int nc = bestC + dc;
+
+                Cell cell = grid[nr][nc];
+                if (!cell.isRevealed() && !cell.isFlagged()) {
+                    revealRecursive(nr, nc, session, false, false, false);
+                }
             }
         }
     }
@@ -528,4 +566,5 @@ public class Board {
             }
         }
     }
+
 }
