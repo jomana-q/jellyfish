@@ -219,14 +219,6 @@ public class GameSession {
         return bonus;
     }
 
-    /** שינוי לבבות בלי המרה לנקודות (לשאלות לפי הטבלה) */
-    private void changeLivesNoOverflowScore(int delta) {
-        lives += delta;
-        if (lives > maxLives) {
-            lives = maxLives;
-        }
-    }
-
     /** סוף משחק: המרת לבבות לנקודות */
     public void convertRemainingLivesToScoreAtEnd() {
         if (lives > 0) {

@@ -274,41 +274,82 @@ public class SettingsPanel extends JPanel {
             text.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
             text.setForeground(Color.WHITE);
 
+            // 🎯 Objective
             appendSection(text, "🎯", new Color(255, 215, 0),
                     " Objective:\n",
-                    "Work together to reveal all safe tiles while avoiding mines.\n"
-                            + "Use questions and surprises wisely to maximize your final score.\n\n");
+                    "Cooperate to achieve the highest team score.\n"
+                            + "Reveal tiles, manage shared lives, and use Question/Surprise stations wisely.\n");
 
+            // 🌀 Turn System
             appendSection(text, "🌀", new Color(120, 200, 255),
                     " Turn System:\n",
-                    "- Players take turns.\n"
-                            + "- A turn ends only after question/surprise resolution.\n\n");
+                    "Players alternate turns based on the performed action:\n"
+                            + "• Reveal a tile (Left Click) → TURN SWITCHES.\n"
+                            + "• Place a flag 🚩 → TURN SWITCHES.\n"
+                            + "• Remove a flag 🚫 (unflag) → TURN STAYS.\n"
+                            + "• Activate a Question ❓ / Surprise 🎁 station → TURN STAYS.\n"
+                            + "• If a mine 💣 is revealed due to flagging → TURN STAYS.\n"
+                            + "\n"
+                            + "Note: Question/Surprise tiles can be activated only once (then marked as USED).\n");
 
+            // 🧩 Tile Types
             appendSection(text, "🧩", new Color(255, 170, 255),
                     " Tile Types:\n",
-                    "• Empty – safe tiles.\n"
-                            + "• Number – how many mines touch the tile.\n"
-                            + "• Mine 💣 – removes life.\n"
-                            + "• Question ❓ – gives quiz.\n"
-                            + "• Surprise 🎁 – random effect.\n\n");
+                    "• Empty – safe tile.\n"
+                            + "• Number – shows how many mines touch the tile.\n"
+                            + "• Mine 💣 – revealing by click costs 1 shared life.\n"
+                            + "• Question ❓ – answer a question for rewards or penalties.\n"
+                            + "• Surprise 🎁 – random good or bad effect.\n");
 
+            // ❤️ Shared Lives
             appendSection(text, "❤️", new Color(255, 100, 140),
                     " Shared Lives:\n",
-                    "Mines remove hearts. When hearts reach zero — game over.\n\n");
+                    "Both players share the same hearts ❤️.\n"
+                            + "Revealing a mine by clicking decreases 1 life.\n"
+                            + "When lives reach 0 → GAME OVER.\n"
+                            + "\n"
+                            + "Maximum lives: 10.\n"
+                            + "Any heart gained above the maximum is automatically converted into score.\n"
+                            + "Each extra heart equals the activation cost of a Question/Surprise station.\n");
 
+            // ⭐ Scoring & Activation Cost
             appendSection(text, "⭐", new Color(255, 230, 120),
-                    " Scoring:\n",
-                    "Correct answers and safe reveals boost team score.\n\n");
+                    " Scoring & Activation Cost:\n",
+                    "Score is shared by both players.\n"
+                            + "• Revealing safe tiles increases score.\n"
+                            + "• Question and Surprise stations have an activation cost of 5 POINTS.\n"
+                            + "• Correct answers and positive surprises increase score.\n"
+                            + "• Wrong answers and negative surprises may reduce score or lives.\n");
 
-            appendSection(text, "🏆", new Color(255, 215, 0),
-                    " Victory:\n",
-                    "You win when all required tiles are cleared and hearts remain.\n");
+            // 🎮 Difficulty Levels & Board Sizes
+            appendSection(text, "🎮", new Color(120, 255, 180),
+                    " Difficulty Levels & Board Sizes:\n",
+                    "The game includes three difficulty levels:\n"
+                            + "• EASY – Board size: 9 × 9 (81 tiles)\n"
+                            + "• MEDIUM – Board size: 13 × 13 (169 tiles)\n"
+                            + "• HARD – Board size: 16 × 16 (256 tiles)\n"
+                            + "\n"
+                            + "Higher difficulty means more mines, fewer lives, and higher risk.\n");
+
+            // 🏁 Game End
+            appendSection(text, "🏁", new Color(255, 215, 0),
+                    " Game End:\n",
+                    "The game ends immediately when ONE of the following occurs:\n"
+                            + "1) One player reveals ALL mines on their own board.\n"
+                            + "2) Shared lives ❤️ reach ZERO.\n"
+                            + "\n"
+                            + "At game end:\n"
+                            + "• Both boards are revealed automatically.\n"
+                            + "• Remaining hearts ❤️ are converted into score.\n"
+                            + "  Each remaining heart equals 5 points (activation cost).\n");
 
             JScrollPane scroll = new JScrollPane(text);
             scroll.setOpaque(false);
             scroll.getViewport().setOpaque(false);
             scroll.setBorder(null);
             panel.add(scroll, BorderLayout.CENTER);
+            
+            text.setCaretPosition(0);
 
             JButton closeBtn = new JButton("Close ✖");
             closeBtn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
