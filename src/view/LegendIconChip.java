@@ -25,7 +25,7 @@ public class LegendIconChip extends JComponent {
         } else {
             this.imgScaled = null;
         }
-        setToolTipText(" ");
+     
     }
 
     @Override
