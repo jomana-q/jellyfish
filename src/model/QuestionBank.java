@@ -1,178 +1,216 @@
 package model;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-/**
- * מחלקה המנהלת את מאגר השאלות (טוענת מקובץ CSV/TSV).
- */
 public class QuestionBank {
 
     private static final QuestionBank INSTANCE = new QuestionBank();
-    public static QuestionBank getInstance() { return INSTANCE; }
-
+    
+    // רשימת השאלות בזיכרון
     private final List<Question> questions = new ArrayList<>();
     private final Random random = new Random();
 
-    // אם הקובץ יושב ליד ההרצה (project root). אם תרצי classpath - תגידי ואשנה.
+    // נתיב הקובץ - בתיקייה הראשית של הפרויקט
     private static final String CSV_FILE_PATH = "questions.csv";
+
+    public static QuestionBank getInstance() { return INSTANCE; }
 
     private QuestionBank() {
         loadQuestionsFromCSV();
     }
 
-    private void loadQuestionsFromCSV() {
-        File f = new File(CSV_FILE_PATH);
+    public List<Question> getQuestions() { return questions; }
 
-        System.out.println("System: Loading questions from: " + f.getAbsolutePath());
-        System.out.println("System: Exists=" + f.exists() + " size=" + (f.exists() ? f.length() : -1));
-
-        if (!f.exists()) {
-            System.err.println("Systems: questions.csv not found.");
+    // ==========================================
+    // 1. טעינת שאלות מהקובץ (מעודכן ל-ID)
+    // ==========================================
+    public void loadQuestionsFromCSV() {
+        questions.clear();
+        File file = new File(CSV_FILE_PATH);
+        
+        if (!file.exists()) {
+            System.err.println("System: questions.csv not found (will be created on save).");
             return;
         }
 
         try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8))) {
+                new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
 
-            String header = br.readLine();
-            if (header == null || header.trim().isEmpty()) {
-                System.err.println("Systems: CSV file is empty.");
-                return;
-            }
+            String header = br.readLine(); // דילוג על הכותרת
+            char delimiter = detectDelimiter(header); // זיהוי סוג המפריד
 
-            // remove UTF-8 BOM if exists
-            header = header.replace("\uFEFF", "");
-
-            char delimiter = detectDelimiter(header);
-
-            int rowNum = 1; // header row = 1
             String line;
-
             while ((line = br.readLine()) != null) {
-                rowNum++;
                 if (line.trim().isEmpty()) continue;
 
-                // parse with quoting support
                 String[] data = parseLine(line, delimiter);
 
-                // Expect 8 columns:
-                // 0 ID, 1 Question, 2 Difficulty(1-4), 3 A,4 B,5 C,6 D,7 Correct(A-D)
-                if (data.length < 8) {
-                    System.err.println("Systems: bad row " + rowNum +
-                            " (expected 8 columns, got " + data.length + "). Skipping. Line: " + line);
-                    continue;
-                }
+                // אנו מצפים ל-8 עמודות: ID, Question, Difficulty, A, B, C, D, Correct
+                if (data.length < 8) continue;
 
                 try {
+                    // קריאת ה-ID (עמודה 0)
+                    int id = 0;
+                    try { 
+                        id = Integer.parseInt(safeTrim(data[0])); 
+                    } catch (Exception e) { 
+                        // אם אין ID תקין, נשים 0 זמנית
+                    }
+
                     String qText = safeTrim(data[1]);
                     int levelNum = Integer.parseInt(safeTrim(data[2]));
+                    QuestionLevel level = getLevelFromInt(levelNum);
 
                     String a = safeTrim(data[3]);
                     String b = safeTrim(data[4]);
                     String c = safeTrim(data[5]);
                     String d = safeTrim(data[6]);
-
-                    // basic validation
-                    if (qText.isEmpty() || a.isEmpty() || b.isEmpty() || c.isEmpty() || d.isEmpty()) {
-                        System.err.println("Systems: missing question/answers in row " + rowNum +
-                                ". Skipping. Line: " + line);
-                        continue;
-                    }
-
-                    QuestionLevel level = switch (levelNum) {
-                        case 1 -> QuestionLevel.EASY;
-                        case 2 -> QuestionLevel.MEDIUM;
-                        case 3 -> QuestionLevel.HARD;
-                        case 4 -> QuestionLevel.EXPERT;
-                        default -> {
-                            System.err.println("Systems: unknown question level " + levelNum +
-                                    " in row " + rowNum + ". Using MEDIUM.");
-                            yield QuestionLevel.MEDIUM;
-                        }
-                    };
-
+                    
                     int correctIdx = letterToIndex(safeTrim(data[7]));
-                    if (correctIdx < 0 || correctIdx > 3) {
-                        System.err.println("Systems: bad correct answer letter in row " + rowNum +
-                                ": " + data[7] + ". Skipping.");
-                        continue;
-                    }
 
                     String[] answers = { a, b, c, d };
-                    questions.add(new Question(qText, answers, correctIdx, level) {
-                        @Override
-                        protected void applyEffect(boolean correct, GameSession session) {
+                    
+                    // יצירת השאלה (חובה ש-Question.java יהיה מעודכן עם ID)
+                    questions.add(new Question(id, qText, answers, correctIdx, level));
 
-                        }
-                    });
-
-                } catch (NumberFormatException nfe) {
-                    System.err.println("Systems: error parsing row " + rowNum + " (difficulty not a number). Skipping.");
-                    System.err.println("Systems: Line: " + line);
                 } catch (Exception e) {
-                    System.err.println("Systems: error parsing row " + rowNum + ". Skipping.");
-                    System.err.println("Systems: Line: " + line);
+                    System.err.println("שגיאה בטעינת שורה: " + line);
                 }
             }
-
-            System.out.println("System: Questions loaded successfully. Total: " + questions.size());
-
         } catch (IOException e) {
-            System.err.println("שגיאה: לא ניתן לקרוא את הקובץ '" + CSV_FILE_PATH + "'.");
             e.printStackTrace();
         }
     }
 
-    public void reloadQuestions() {
-        questions.clear();
-        loadQuestionsFromCSV();
-        System.out.println("System: Questions reloaded successfully. Total: " + questions.size());
+    // ==========================================
+    // 2. הוספת שאלה ושמירה מידית
+    // ==========================================
+    public void addQuestion(String text, String[] answers, int correctIndex, QuestionLevel level) {
+        // ID זמני (0), הפונקציה save תסדר אותו מחדש
+        questions.add(new Question(0, text, answers, correctIndex, level));
+        saveQuestionsToCSV();
     }
 
+    // ==========================================
+    // 3. מחיקת שאלה ושמירה מידית
+    // ==========================================
+    public void deleteQuestion(int indexInList) {
+        if (indexInList >= 0 && indexInList < questions.size()) {
+            questions.remove(indexInList);
+            saveQuestionsToCSV();
+        }
+    }
+
+    // ==========================================
+    // 4. שמירה וסידור מחדש של ה-ID (חשוב!)
+    // ==========================================
+    public void saveQuestionsToCSV() {
+        try (BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(new FileOutputStream(CSV_FILE_PATH), StandardCharsets.UTF_8))) {
+
+            // כתיבת כותרת
+            writer.write("ID,Question,Difficulty,A,B,C,D,Correct");
+            writer.newLine();
+
+            for (int i = 0; i < questions.size(); i++) {
+                Question q = questions.get(i);
+                
+                // === חישוב ID חדש לפי הסדר (1, 2, 3...) ===
+                int newId = i + 1;
+                q.setId(newId); 
+
+                String line = String.format("%d,\"%s\",%d,\"%s\",\"%s\",\"%s\",\"%s\",%s",
+                        newId,
+                        escapeCsv(q.getQuestionText()),
+                        levelToInt(q.getLevel()),
+                        escapeCsv(q.getAnswers()[0]),
+                        escapeCsv(q.getAnswers()[1]),
+                        escapeCsv(q.getAnswers()[2]),
+                        escapeCsv(q.getAnswers()[3]),
+                        indexToLetter(q.getCorrectAnswerIndex())
+                );
+
+                writer.write(line);
+                writer.newLine();
+            }
+            System.out.println("Questions saved and re-indexed successfully!");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ==========================================
+    // 5. פונקציות למשחק
+    // ==========================================
     public Question getRandomQuestion() {
         if (questions.isEmpty()) return null;
         return questions.get(random.nextInt(questions.size()));
     }
 
+    public void reloadQuestions() {
+        loadQuestionsFromCSV();
+    }
+
+    // ==========================================
+    // 6. פונקציות עזר (Helpers)
+    // ==========================================
+
     private String safeTrim(String s) {
         return s == null ? "" : s.trim();
     }
 
-    private int letterToIndex(String letter) {
-        if (letter == null) return -1;
-        letter = letter.trim().toUpperCase();
+    private String escapeCsv(String val) {
+        if (val == null) return "";
+        return val.replace("\"", "\"\"");
+    }
 
-        return switch (letter) {
-            case "A" -> 0;
-            case "B" -> 1;
-            case "C" -> 2;
-            case "D" -> 3;
-            default -> -1;
+    private int levelToInt(QuestionLevel l) {
+        if (l == null) return 2;
+        return switch (l) {
+            case EASY -> 1;
+            case MEDIUM -> 2;
+            case HARD -> 3;
+            case EXPERT -> 4;
+        };
+    }
+    
+    private QuestionLevel getLevelFromInt(int n) {
+        return switch (n) {
+            case 1 -> QuestionLevel.EASY;
+            case 2 -> QuestionLevel.MEDIUM;
+            case 3 -> QuestionLevel.HARD;
+            case 4 -> QuestionLevel.EXPERT;
+            default -> QuestionLevel.MEDIUM;
         };
     }
 
+    private int letterToIndex(String letter) {
+        if (letter == null) return -1;
+        return switch (letter.trim().toUpperCase()) {
+            case "A" -> 0; case "B" -> 1; case "C" -> 2; case "D" -> 3; default -> -1;
+        };
+    }
+
+    private String indexToLetter(int index) {
+        return switch (index) {
+            case 0 -> "A"; case 1 -> "B"; case 2 -> "C"; case 3 -> "D"; default -> "A";
+        };
+    }
+    
     private char detectDelimiter(String header) {
-        // Prefer tab if exists (Excel often saves TSV)
+        if (header == null) return ',';
         if (header.contains("\t")) return '\t';
-        if (header.contains(","))  return ',';
-        if (header.contains(";"))  return ';';
-        // fallback
+        if (header.contains(";")) return ';';
         return ',';
     }
 
     /**
-     * Parses a delimited line with support for quotes:
-     * - fields can be wrapped in "..."
-     * - inside quotes, delimiter doesn't split
-     * - escaped quotes "" become "
+     * פונקציה לפירוק שורת CSV (כולל תמיכה במרכאות)
      */
     private String[] parseLine(String line, char delimiter) {
         List<String> out = new ArrayList<>();
@@ -184,8 +222,7 @@ public class QuestionBank {
 
             if (ch == '"') {
                 if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
-                    // escaped quote
-                    cur.append('"');
+                    cur.append('"'); 
                     i++;
                 } else {
                     inQuotes = !inQuotes;

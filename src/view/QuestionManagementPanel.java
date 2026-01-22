@@ -7,6 +7,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import model.*;
 
 /**
  * מסך ניהול שאלות (Admin Wizard).
@@ -194,14 +195,16 @@ public class QuestionManagementPanel extends JPanel {
     }
 
     private void showQuestionDialog(Integer rowToEdit) {
-        JDialog dialog = new JDialog(parent, "Make question", true);
+        JDialog dialog = new JDialog(parent, "Manage Question", true);
         dialog.setLayout(new GridLayout(9, 2, 10, 10));
         dialog.setSize(520, 460);
         dialog.setLocationRelativeTo(this);
-
         JTextField idField = new JTextField();
+        idField.setEditable(false);
+        idField.setBackground(new Color(230, 230, 230));         idField.setText("Auto"); 
         JTextField qField = new JTextField();
 
+        
         String[] levels = {"1", "2", "3", "4"};
         JComboBox<String> diffBox = new JComboBox<>(levels);
 
@@ -213,21 +216,24 @@ public class QuestionManagementPanel extends JPanel {
         String[] correctOpts = {"A", "B", "C", "D"};
         JComboBox<String> correctBox = new JComboBox<>(correctOpts);
 
+        
         if (rowToEdit != null) {
-            idField.setText(String.valueOf(tableModel.getValueAt(rowToEdit, 0)));
-            qField.setText(String.valueOf(tableModel.getValueAt(rowToEdit, 1)));
-            diffBox.setSelectedItem(String.valueOf(tableModel.getValueAt(rowToEdit, 2)));
-            ansA.setText(String.valueOf(tableModel.getValueAt(rowToEdit, 3)));
-            ansB.setText(String.valueOf(tableModel.getValueAt(rowToEdit, 4)));
-            ansC.setText(String.valueOf(tableModel.getValueAt(rowToEdit, 5)));
-            ansD.setText(String.valueOf(tableModel.getValueAt(rowToEdit, 6)));
-            correctBox.setSelectedItem(String.valueOf(tableModel.getValueAt(rowToEdit, 7)));
-            idField.setEditable(false);
-        } else {
-            idField.setText(getNextId());
+            idField.setText(tableModel.getValueAt(rowToEdit, 0).toString());
+            
+            qField.setText(tableModel.getValueAt(rowToEdit, 1).toString());
+            diffBox.setSelectedItem(tableModel.getValueAt(rowToEdit, 2).toString());
+            ansA.setText(tableModel.getValueAt(rowToEdit, 3).toString());
+            ansB.setText(tableModel.getValueAt(rowToEdit, 4).toString());
+            ansC.setText(tableModel.getValueAt(rowToEdit, 5).toString());
+            ansD.setText(tableModel.getValueAt(rowToEdit, 6).toString());
+            correctBox.setSelectedItem(tableModel.getValueAt(rowToEdit, 7).toString());
+        } else {            int nextId = QuestionBank.getInstance().getQuestions().size() + 1;
+  
+            idField.setText(String.valueOf(nextId)); 
         }
-
-        dialog.add(new JLabel("ID:")); dialog.add(idField);
+        
+        
+        dialog.add(new JLabel("ID (Auto):")); dialog.add(idField);
         dialog.add(new JLabel("Question:")); dialog.add(qField);
         dialog.add(new JLabel("Difficulty (1-4):")); dialog.add(diffBox);
         dialog.add(new JLabel("Answer A:")); dialog.add(ansA);
@@ -236,33 +242,45 @@ public class QuestionManagementPanel extends JPanel {
         dialog.add(new JLabel("Answer D:")); dialog.add(ansD);
         dialog.add(new JLabel("Correct Answer:")); dialog.add(correctBox);
 
-        JButton okBtn = new JButton("Confirmation");
+        JButton okBtn = new JButton("Save & Close");
+        
+        
         okBtn.addActionListener(e -> {
-            String id = idField.getText().trim();
             String q  = qField.getText().trim();
-            String d  = String.valueOf(diffBox.getSelectedItem()).trim();
-
             String a = ansA.getText().trim();
             String b = ansB.getText().trim();
             String c = ansC.getText().trim();
             String dd= ansD.getText().trim();
 
-            String corr = String.valueOf(correctBox.getSelectedItem()).trim();
-
-            if (id.isEmpty() || q.isEmpty() || d.isEmpty() || a.isEmpty() || b.isEmpty() || c.isEmpty() || dd.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Please fill in all fields (including Answer D).");
+            if (q.isEmpty() || a.isEmpty() || b.isEmpty() || c.isEmpty() || dd.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Please fill in all fields.");
                 return;
             }
 
-            String[] rowData = { id, q, d, a, b, c, dd, corr };
+            
+            String corrStr = (String)correctBox.getSelectedItem();
+            int correctIdx = "ABCD".indexOf(corrStr); 
+
+            
+            String levelStr = (String)diffBox.getSelectedItem();
+            int levelInt = Integer.parseInt(levelStr);
+            QuestionLevel level = switch(levelInt) {
+                case 1 -> QuestionLevel.EASY;
+                case 2 -> QuestionLevel.MEDIUM;
+                case 3 -> QuestionLevel.HARD;
+                case 4 -> QuestionLevel.EXPERT;
+                default -> QuestionLevel.MEDIUM;
+            };
+
+            String[] answers = {a, b, c, dd};
 
             if (rowToEdit != null) {
-                for (int i = 0; i < rowData.length; i++) {
-                    tableModel.setValueAt(rowData[i], rowToEdit, i);
-                }
-            } else {
-                tableModel.addRow(rowData);
+            	QuestionBank.getInstance().deleteQuestion(rowToEdit);
             }
+           
+            QuestionBank.getInstance().addQuestion(q, answers, correctIdx, level);
+
+            loadQuestionsFromCSV(); 
             dialog.dispose();
         });
 
