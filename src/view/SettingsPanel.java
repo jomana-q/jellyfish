@@ -148,13 +148,9 @@ public class SettingsPanel extends JPanel {
         backBtn = new JButton("Back");
         styleButton(backBtn, new Color(70, 80, 100));
 
-        // 🔹 כפתור Game Help
-        JButton helpBtn = new JButton("Game Help ❔");
-        styleButton(helpBtn, new Color(70, 120, 200));
-
+        
         buttonsPanel.add(saveBtn);
         buttonsPanel.add(backBtn);
-        buttonsPanel.add(helpBtn);
 
         add(buttonsPanel, BorderLayout.SOUTH);
 
@@ -170,11 +166,7 @@ public class SettingsPanel extends JPanel {
             parent.showMainMenu();
         });
 
-        // פעולה לפתיחת חלון העזרה
-        helpBtn.addActionListener(e -> {
-            HelpDialog dlg = new HelpDialog();
-            dlg.setVisible(true);
-        });
+        
     }
 
     /**

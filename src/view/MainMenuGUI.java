@@ -168,7 +168,7 @@ public class MainMenuGUI extends JFrame {
 
         centerPanel.add(Box.createVerticalStrut(60));
 
-        // === הכפתורים ===
+         // === הכפתורים ===
 
         // 1. Start Game
         JButton startGameBtn = createStyledButton("Start Game");
@@ -176,18 +176,28 @@ public class MainMenuGUI extends JFrame {
         startGameBtn.addActionListener(e -> showSetupScreen());
         centerPanel.add(startGameBtn);
 
-        centerPanel.add(Box.createVerticalStrut(20));
+        centerPanel.add(Box.createVerticalStrut(25)); 
 
-        // ⭐ 2. Top Scores (הכפתור החדש!)
+        // 2. Top Scores
         JButton scoresBtn = createStyledButton("Top Scores 🏆");
         scoresBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        // false = הגענו מהתפריט הראשי
         scoresBtn.addActionListener(e -> showHistoryPanel(false));
         centerPanel.add(scoresBtn);
 
-        centerPanel.add(Box.createVerticalStrut(20));
+                centerPanel.add(Box.createVerticalStrut(25)); 
 
-        // 3. Admin Login
+        // 3. Game Help
+        JButton helpBtn = createStyledButton("Game Help ❔");
+        helpBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        helpBtn.addActionListener(e -> {
+             HelpDialog dlg = new HelpDialog();
+             dlg.setVisible(true);
+        });
+        centerPanel.add(helpBtn);
+
+        centerPanel.add(Box.createVerticalStrut(25)); 
+
+        // 4. Admin Login
         JButton adminBtn = createStyledButton("Admin Login");
         adminBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         adminBtn.addActionListener(e -> showAdminLogin());
@@ -524,6 +534,156 @@ public class MainMenuGUI extends JFrame {
 
             for (int i = 0; i < symbolPositions.length; i++) {
                 g2d.drawString(activeSymbols[i], symbolPositions[i].x, symbolPositions[i].y);
+            }
+        }
+    }
+    
+ // ==========================
+    // Help Dialog (Moved from SettingsPanel)
+    // ==========================
+    private class HelpDialog extends JDialog {
+
+        HelpDialog() {
+            // שינוי קטן: במקום SettingsPanel.this משתמשים ב-MainMenuGUI.this
+            super(MainMenuGUI.this, "How to Play – Minesweeper", ModalityType.APPLICATION_MODAL);
+
+            setSize(650, 650);
+            setLocationRelativeTo(MainMenuGUI.this);
+
+            JPanel panel = new JPanel(new BorderLayout());
+            panel.setBackground(new Color(30, 30, 30));
+            panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+            JLabel title = new JLabel("▦  How to Play", SwingConstants.CENTER);
+            title.setFont(new Font("Segoe UI Emoji", Font.BOLD, 28));
+            title.setForeground(Color.WHITE);
+            panel.add(title, BorderLayout.NORTH);
+
+            JTextPane text = new JTextPane();
+            text.setEditable(false);
+            text.setOpaque(false);
+            text.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
+            text.setForeground(Color.WHITE);
+
+            // 🎯 Objective
+            appendSection(text, "🎯", new Color(255, 215, 0),
+                    " Objective:\n",
+                    "Cooperate to achieve the highest team score.\n"
+                            + "Reveal tiles, manage shared lives, and use Question/Surprise stations wisely.\n");
+
+            // 🌀 Turn System
+            appendSection(text, "🌀", new Color(120, 200, 255),
+                    " Turn System:\n",
+                    "Players alternate turns based on the performed action:\n"
+                            + "• Reveal a tile (Left Click) → TURN SWITCHES.\n"
+                            + "• Place a flag 🚩 → TURN SWITCHES.\n"
+                            + "• Remove a flag 🚫 (unflag) → TURN STAYS.\n"
+                            + "• Activate a Question ❓ / Surprise 🎁 station → TURN STAYS.\n"
+                            + "• If a mine 💣 is revealed due to flagging → TURN STAYS.\n"
+                            + "\n"
+                            + "Note: Question/Surprise tiles can be activated only once (then marked as USED).\n");
+
+            // 🧩 Tile Types
+            appendSection(text, "🧩", new Color(255, 170, 255),
+                    " Tile Types:\n",
+                    "• Empty – safe tile.\n"
+                            + "• Number – shows how many mines touch the tile.\n"
+                            + "• Mine 💣 – revealing by click costs 1 shared life.\n"
+                            + "• Question ❓ – answer a question for rewards or penalties.\n"
+                            + "• Surprise 🎁 – random good or bad effect.\n");
+
+            // ❤️ Shared Lives
+            appendSection(text, "❤️", new Color(255, 100, 140),
+                    " Shared Lives:\n",
+                    "Both players share the same hearts ❤️.\n"
+                            + "Revealing a mine by clicking decreases 1 life.\n"
+                            + "When lives reach 0 → GAME OVER.\n"
+                            + "\n"
+                            + "Maximum lives: 10.\n"
+                            + "Any heart gained above the maximum is automatically converted into score.\n"
+                            + "Each extra heart equals the activation cost of a Question/Surprise station.\n");
+
+            // ⭐ Scoring & Activation Cost
+            appendSection(text, "⭐", new Color(255, 230, 120),
+                    " Scoring & Activation Cost:\n",
+                    "Score is shared by both players.\n"
+                            + "• Revealing safe tiles increases score.\n"
+                            + "• Question and Surprise stations have an activation cost of 5 POINTS.\n"
+                            + "• Correct answers and positive surprises increase score.\n"
+                            + "• Wrong answers and negative surprises may reduce score or lives.\n");
+
+            // 🎮 Difficulty Levels & Board Sizes
+            appendSection(text, "🎮", new Color(120, 255, 180),
+                    " Difficulty Levels & Board Sizes:\n",
+                    "The game includes three difficulty levels:\n"
+                            + "• EASY – Board size: 9 × 9 (81 tiles)\n"
+                            + "• MEDIUM – Board size: 13 × 13 (169 tiles)\n"
+                            + "• HARD – Board size: 16 × 16 (256 tiles)\n"
+                            + "\n"
+                            + "Higher difficulty means more mines, fewer lives, and higher risk.\n");
+
+            // 🏁 Game End
+            appendSection(text, "🏁", new Color(255, 215, 0),
+                    " Game End:\n",
+                    "The game ends immediately when ONE of the following occurs:\n"
+                            + "1) One player reveals ALL mines on their own board.\n"
+                            + "2) Shared lives ❤️ reach ZERO.\n"
+                            + "\n"
+                            + "At game end:\n"
+                            + "• Both boards are revealed automatically.\n"
+                            + "• Remaining hearts ❤️ are converted into score.\n"
+                            + "  Each remaining heart equals 5 points (activation cost).\n");
+
+            JScrollPane scroll = new JScrollPane(text);
+            scroll.setOpaque(false);
+            scroll.getViewport().setOpaque(false);
+            scroll.setBorder(null);
+            panel.add(scroll, BorderLayout.CENTER);
+            
+            text.setCaretPosition(0);
+
+            JButton closeBtn = new JButton("Close ✖");
+            closeBtn.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
+            closeBtn.setBackground(new Color(140, 100, 200));
+            closeBtn.setForeground(Color.WHITE);
+            closeBtn.setFocusPainted(false);
+            closeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            closeBtn.addActionListener(e -> dispose());
+
+            JPanel bottom = new JPanel();
+            bottom.setOpaque(false);
+            bottom.add(closeBtn);
+            panel.add(bottom, BorderLayout.SOUTH);
+
+            setContentPane(panel);
+        }
+
+        private void appendSection(JTextPane pane, String icon, Color iconColor,
+                                   String title, String body) {
+
+            javax.swing.text.StyledDocument doc = pane.getStyledDocument();
+
+            try {
+                javax.swing.text.Style iconStyle = pane.addStyle("icon", null);
+                javax.swing.text.StyleConstants.setForeground(iconStyle, iconColor);
+                javax.swing.text.StyleConstants.setBold(iconStyle, true);
+                javax.swing.text.StyleConstants.setFontSize(iconStyle, 20);
+
+                javax.swing.text.Style titleStyle = pane.addStyle("title", null);
+                javax.swing.text.StyleConstants.setForeground(titleStyle, Color.WHITE);
+                javax.swing.text.StyleConstants.setBold(titleStyle, true);
+                javax.swing.text.StyleConstants.setFontSize(titleStyle, 16);
+
+                javax.swing.text.Style bodyStyle = pane.addStyle("body", null);
+                javax.swing.text.StyleConstants.setForeground(bodyStyle, Color.WHITE);
+                javax.swing.text.StyleConstants.setFontSize(bodyStyle, 14);
+
+                doc.insertString(doc.getLength(), icon + " ", iconStyle);
+                doc.insertString(doc.getLength(), title + "\n", titleStyle);
+                doc.insertString(doc.getLength(), body + "\n\n", bodyStyle);
+
+            } catch (javax.swing.text.BadLocationException ex) {
+                ex.printStackTrace();
             }
         }
     }
