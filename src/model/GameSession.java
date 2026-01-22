@@ -215,7 +215,7 @@ public class GameSession {
         }
 
         updateScore(scoreDelta);
-        changeLivesNoOverflowScore(livesDelta);
+        changeLives(livesDelta);
         return bonus;
     }
 
