@@ -301,7 +301,12 @@ public class MinesweeperController {
         view.refreshView();
 
         if (isUnflag) return;
-        if (revealedMineNow) return;
+
+        if (revealedMineNow) {
+            // בדיקה מיידית של סיום משחק (בלי לחכות לתור הבא)
+            endTurnWithoutSwitching();   
+            return;
+        }
 
         endTurn();
     }
