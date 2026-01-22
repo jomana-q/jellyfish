@@ -51,31 +51,7 @@ public class AdminLoginPanel extends JPanel {
         // 2. כרטיס (Card) - רקע משתנה לפי הת'ים
         JPanel card = new JPanel(new GridBagLayout()) {
             @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int w = getWidth();
-                int h = getHeight();
-                
-                // בדיקה האם המצב כהה או בהיר
-                boolean isDark = ThemeManager.getInstance().isDarkMode();
-
-                // רקע הכרטיס: כהה שקוף או לבן שקוף
-                Color bgColor = isDark ? new Color(0, 0, 0, 60) : new Color(255, 255, 255, 200);
-                // מסגרת: לבנה עדינה או אפורה עדינה
-                Color borderColor = isDark ? new Color(255, 255, 255, 50) : new Color(0, 0, 0, 50);
-
-                g2.setColor(bgColor);
-                g2.fillRoundRect(0, 0, w, h, 20, 20);
-
-                g2.setColor(borderColor);
-                g2.setStroke(new BasicStroke(1f));
-                g2.drawRoundRect(0, 0, w - 1, h - 1, 20, 20);
-
-                g2.dispose();
-                // super.paintComponent(g); // לא צריך, ציירנו רקע ידנית
-            }
+            protected void paintComponent(Graphics g) {}
         };
         card.setOpaque(false);
         card.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
