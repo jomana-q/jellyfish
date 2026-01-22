@@ -81,135 +81,137 @@ public class MinesweeperController {
     }
 
     // Click handling
-    public void handleLeftClick(boolean firstBoard, int row, int col) {
-        if (paused) return;
+    public void handleLeftClick(boolean firstBoard, int row, int col) {if (paused) return;
 
-        Board board = firstBoard ? board1 : board2;
-        Cell cell = board.getCell(row, col);
+    Board board = firstBoard ? board1 : board2;
+    Cell cell = board.getCell(row, col);
 
-        if (cell.isRevealed() && !board.canActivateSpecial(row, col)) return;
+    if (cell.isRevealed() && !board.canActivateSpecial(row, col)) return;
 
-        // activate question/surprise
-        if (board.canActivateSpecial(row, col)) {
+    // activate question/surprise
+    if (board.canActivateSpecial(row, col)) {
 
-            if (!session.canPayForPower()) {
-                boolean isQuestionTile = (cell.getType() == CellType.QUESTION);
-                int cost = session.getDifficulty().getPowerCost();
-                int current = session.getScore();
+        if (!session.canPayForPower()) {
+            boolean isQuestionTile = (cell.getType() == CellType.QUESTION);
+            int cost = session.getDifficulty().getPowerCost();
+            int current = session.getScore();
 
-                view.showNotEnoughPointsOverlay(isQuestionTile, cost, current);
-                view.refreshView();
-                return;
-            }
-
-            // Question bank empty?
-            if (cell.getType() == CellType.QUESTION) {
-                Question test = QuestionBank.getInstance().getRandomQuestion();
-                if (test == null) {
-                    view.showResultOverlay(
-                            MinesweeperGUI.OverlayType.INFO,
-                            "NO QUESTIONS",
-                            "questions.csv missing or empty",
-                            OVERLAY_SECONDS
-                    );
-                    view.refreshView();
-                    return;
-                }
-            }
-
-            // Pay activation cost first
-            int scoreBeforePay = session.getScore();
-            int livesBeforePay = session.getLives();
-            session.payForPower();
-            int scoreAfterPay = session.getScore();
-            int livesAfterPay = session.getLives();
-
-            int payDeltaScore = scoreAfterPay - scoreBeforePay;
-            int payDeltaLives = livesAfterPay - livesBeforePay; // usually 0
-
-            // ===== SURPRISE =====
-            if (cell.getType() == CellType.SURPRISE) {
-                boolean good = Math.random() < 0.5;
-
-                session.applySurpriseOutcome(good);
-                board.markSpecialUsed(row, col);
-
-                int outcomeDeltaScore = session.getScore() - scoreAfterPay;
-                int outcomeDeltaLives = session.getLives() - livesAfterPay;
-
-                SoundManager sm = SoundManager.getInstance();
-                int SOUND_DELAY_MS = 350;
-                Timer soundTimer = new Timer(SOUND_DELAY_MS, e -> {
-                    if (good) sm.playGoodSurpriseThenResumeGame();
-                    else sm.playBadSurpriseThenResumeGame();
-                    ((Timer) e.getSource()).stop();
-                });
-                soundTimer.setRepeats(false);
-                soundTimer.start();
-
-                view.playGiftCenterAndShowOverlay(
-                        good ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
-                        good ? "GOOD SURPRISE!" : "BAD SURPRISE!",
-                        formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, null),
-                        OVERLAY_SECONDS,
-                        this::endTurn
-                );
-
-                return;
-            }
-
-            // ===== QUESTION =====
-            if (cell.getType() == CellType.QUESTION) {
-
-                SoundManager sm = SoundManager.getInstance();
-
-                sm.playQuestionLoop();
-
-                Question q = QuestionBank.getInstance().getRandomQuestion();
-                boolean correct = QuestionDialog.showQuestionDialog(view, q);
-
-                if (correct) sm.playCorrectFor5SecondsThenResumeGame();
-                else sm.playWrongThenResumeGame();
-
-                QuestionBonusEffect bonus = session.applyQuestionResult(q.getLevel(), correct);
-
-                if (bonus == QuestionBonusEffect.REVEAL_MINE) {
-                    board.revealRandomMine();
-                } else if (bonus == QuestionBonusEffect.REVEAL_3X3) {
-                    board.revealBest3x3(session);
-                }
-
-                board.markSpecialUsed(row, col);
-
-                int outcomeDeltaScore = session.getScore() - scoreAfterPay;
-                int outcomeDeltaLives = session.getLives() - livesAfterPay;
-
-                view.refreshView();
-                view.showQuestionResultOverlay(
-                        correct ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
-                        correct ? "CORRECT ANSWER!" : "WRONG ANSWER!",
-                        formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, bonus),
-                        OVERLAY_SECONDS
-                );
-                endTurn();
-                return;
-            }
-
-            // fallback
-            view.showResultOverlay(
-                    MinesweeperGUI.OverlayType.INFO,
-                    "CANNOT ACTIVATE",
-                    "Try another cell",
-                    OVERLAY_SECONDS
-            );
+            view.showNotEnoughPointsOverlay(isQuestionTile, cost, current);
             view.refreshView();
-            endTurn();
             return;
         }
 
-        // ===== פתיחה רגילה – עכשיו עם אופציה לאנימציית קסקייד =====
-        startCascadeOpen(board, row, col);
+        // Question bank empty?
+        if (cell.getType() == CellType.QUESTION) {
+            Question test = QuestionBank.getInstance().getRandomQuestion();
+            if (test == null) {
+                view.showResultOverlay(
+                        MinesweeperGUI.OverlayType.INFO,
+                        "NO QUESTIONS",
+                        "questions.csv missing or empty",
+                        OVERLAY_SECONDS
+                );
+                view.refreshView();
+                return;
+            }
+        }
+
+        // Pay activation cost first
+        int scoreBeforePay = session.getScore();
+        int livesBeforePay = session.getLives();
+        session.payForPower();
+        int scoreAfterPay = session.getScore();
+        int livesAfterPay = session.getLives();
+
+        int payDeltaScore = scoreAfterPay - scoreBeforePay;
+        int payDeltaLives = livesAfterPay - livesBeforePay; // usually 0
+
+        // ===== SURPRISE =====
+        if (cell.getType() == CellType.SURPRISE) {
+            boolean good = Math.random() < 0.5;
+
+            session.applySurpriseOutcome(good);
+            board.markSpecialUsed(row, col);
+
+            int outcomeDeltaScore = session.getScore() - scoreAfterPay;
+            int outcomeDeltaLives = session.getLives() - livesAfterPay;
+
+            SoundManager sm = SoundManager.getInstance();
+            int SOUND_DELAY_MS = 350;
+            Timer soundTimer = new Timer(SOUND_DELAY_MS, e -> {
+                if (good) sm.playGoodSurpriseThenResumeGame();
+                else sm.playBadSurpriseThenResumeGame();
+                ((Timer) e.getSource()).stop();
+            });
+            soundTimer.setRepeats(false);
+            soundTimer.start();
+
+            view.playGiftCenterAndShowOverlay(
+                    good ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
+                    good ? "GOOD SURPRISE!" : "BAD SURPRISE!",
+                    formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, null),
+                    OVERLAY_SECONDS,
+                    // === שינוי: שימוש בפונקציה החדשה שלא מחליפה תור ===
+                    this::endTurnWithoutSwitching
+            );
+
+            return;
+        }
+
+        // ===== QUESTION =====
+        if (cell.getType() == CellType.QUESTION) {
+
+            SoundManager sm = SoundManager.getInstance();
+
+            sm.playQuestionLoop();
+
+            Question q = QuestionBank.getInstance().getRandomQuestion();
+            boolean correct = QuestionDialog.showQuestionDialog(view, q);
+
+            if (correct) sm.playCorrectFor5SecondsThenResumeGame();
+            else sm.playWrongThenResumeGame();
+
+            QuestionBonusEffect bonus = session.applyQuestionResult(q.getLevel(), correct);
+
+            if (bonus == QuestionBonusEffect.REVEAL_MINE) {
+                board.revealRandomMine();
+            } else if (bonus == QuestionBonusEffect.REVEAL_3X3) {
+                board.revealBest3x3(session);
+            }
+
+            board.markSpecialUsed(row, col);
+
+            int outcomeDeltaScore = session.getScore() - scoreAfterPay;
+            int outcomeDeltaLives = session.getLives() - livesAfterPay;
+
+            view.refreshView();
+            view.showQuestionResultOverlay(
+                    correct ? MinesweeperGUI.OverlayType.GOOD : MinesweeperGUI.OverlayType.BAD,
+                    correct ? "CORRECT ANSWER!" : "WRONG ANSWER!",
+                    formatPowerSubtitle(payDeltaScore, payDeltaLives, outcomeDeltaScore, outcomeDeltaLives, bonus),
+                    OVERLAY_SECONDS
+            );
+            
+            // === שינוי: שימוש בפונקציה החדשה שלא מחליפה תור ===
+            endTurnWithoutSwitching(); 
+            return;
+        }
+
+        // fallback
+        view.showResultOverlay(
+                MinesweeperGUI.OverlayType.INFO,
+                "CANNOT ACTIVATE",
+                "Try another cell",
+                OVERLAY_SECONDS
+        );
+        view.refreshView();
+        // גם במקרה של שגיאה, עדיף לא להעביר תור
+        endTurnWithoutSwitching();
+        return;
     }
+
+    // ===== פתיחה רגילה (משאירים כמו שהיה) =====
+    startCascadeOpen(board, row, col);}
 
     /**
      * פתיחת תא עם אנימציית קסקייד:
@@ -378,6 +380,29 @@ public class MinesweeperController {
             }
         }
         return count;
+    }
+    
+    /**
+     * פונקציה חדשה: סיום פעולה בלי להחליף תור (לשאלות והפתעות).
+     */
+    private void endTurnWithoutSwitching() {
+        view.refreshView();
+
+        // בדיקות ניצחון/הפסד רגילות
+        if (board1.allMinesRevealed() || board2.allMinesRevealed()) {
+            SoundManager.getInstance().stopBgm();
+            view.showGameOver(true);
+            return;
+        }
+        if (session.isOutOfLives()) {
+            SoundManager.getInstance().stopBgm();
+            view.showGameOver(false);
+            return;
+        }
+
+        // ההבדל היחיד: אנחנו לא מחליפים את ה-player1Turn
+        // רק מעדכנים את התצוגה
+        view.refreshView();
     }
 
     private void showMineToastIfChanged(int minesBefore, int minesAfter, int livesBefore, int livesAfter, int scoreBefore, int scoreAfter) {
